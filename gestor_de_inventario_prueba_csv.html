@@ -474,7 +474,7 @@
             btn.disabled = true;
 
             try {
-                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${TARGET_FILE}?ref=${branch}`;
+                const url = `https://github.com/albeiroariaslopez/albeiro`;
                 const res = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -535,7 +535,7 @@
             syncIcon.classList.add('animate-spin');
             updateConnectionBadge('syncing');
 
-            const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${TARGET_FILE}?ref=${ghConfig.branch}`;
+            const url = `https://github.com/albeiroariaslopez/albeiro`;
 
             try {
                 const response = await fetch(url, {
@@ -707,7 +707,7 @@
             btnIcon.className = 'fa-solid fa-spinner animate-spin';
             btnText.innerText = 'Realizando Commit...';
 
-            const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${TARGET_FILE}`;
+            const url = `https://github.com/albeiroariaslopez/albeiro`;
             
             // Codificar a Base64 en UTF-8
             const base64Content = encodeBase64Utf8(fullCsvText);
