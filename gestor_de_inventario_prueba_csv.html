@@ -165,13 +165,13 @@
                         <input type="text" id="articuloInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="Nombre de artículo">
                     </div>
 
-                    <!-- Row for CANTIDAS & VALOR -->
+                    <!-- Row for CANTIDAD & VALOR -->
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label for="cantidasInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                            <label for="cantidadInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
                                 CANTIDAD <span class="text-rose-500">*</span>
                             </label>
-                            <input type="number" min="0" step="1" id="cantidasInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="0">
+                            <input type="number" min="0" step="1" id="cantidadInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="0">
                         </div>
                         <div>
                             <label for="valorInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
@@ -239,7 +239,7 @@
                                     <th class="py-3.5 px-4 cursor-pointer hover:bg-slate-100" onclick="sortBy('id')">ID <i class="fa-solid fa-sort text-slate-400 text-[10px]"></i></th>
                                     <th class="py-3.5 px-4 cursor-pointer hover:bg-slate-100" onclick="sortBy('clave')">CLAVE <i class="fa-solid fa-sort text-slate-400 text-[10px]"></i></th>
                                     <th class="py-3.5 px-4 cursor-pointer hover:bg-slate-100" onclick="sortBy('articulo')">ARTÍCULO <i class="fa-solid fa-sort text-slate-400 text-[10px]"></i></th>
-                                    <th class="py-3.5 px-4 text-center cursor-pointer hover:bg-slate-100" onclick="sortBy('cantidas')">CANTIDAD <i class="fa-solid fa-sort text-slate-400 text-[10px]"></i></th>
+                                    <th class="py-3.5 px-4 text-center cursor-pointer hover:bg-slate-100" onclick="sortBy('cantidad')">CANTIDAD <i class="fa-solid fa-sort text-slate-400 text-[10px]"></i></th>
                                     <th class="py-3.5 px-4 text-center cursor-pointer hover:bg-slate-100" onclick="sortBy('estado')">ESTADO <i class="fa-solid fa-sort text-slate-400 text-[10px]"></i></th>
                                     <th class="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-100" onclick="sortBy('valor')">VALOR <i class="fa-solid fa-sort text-slate-400 text-[10px]"></i></th>
                                 </tr>
@@ -589,7 +589,7 @@
             
             if (lines.length === 0) return;
 
-            // Espera cabecera: ID;CLAVE;ARTICULO;CANTIDAS;ESTADO;VALOR
+            // Espera cabecera: ID;CLAVE;ARTICULO;CANTIDAD;ESTADO;VALOR
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
@@ -601,7 +601,7 @@
                         id: parseInt(cols[0]) || 0,
                         clave: cols[1],
                         articulo: cols[2],
-                        cantidas: parseInt(cols[3]) || 0,
+                        cantidad: parseInt(cols[3]) || 0,
                         estado: cols[4],
                         valor: parseFloat(cols[5]) || 0
                     });
@@ -658,12 +658,12 @@
 
             const clave = document.getElementById('claveInput').value.trim();
             const articulo = document.getElementById('articuloInput').value.trim();
-            const cantidas = parseInt(document.getElementById('cantidasInput').value);
+            const cantidad = parseInt(document.getElementById('cantidadInput').value);
             const estado = document.getElementById('estadoSelect').value;
             const valor = parseFloat(document.getElementById('valorInput').value);
 
             // Validaciones Estrictas
-            if (!clave || !articulo || isNaN(cantidas) || !estado || isNaN(valor)) {
+            if (!clave || !articulo || isNaN(cantidad) || !estado || isNaN(valor)) {
                 showToast('Todos los campos son estrictamente obligatorios', 'error');
                 return;
             }
@@ -678,7 +678,7 @@
                 id: newId,
                 clave: clave,
                 articulo: articulo,
-                cantidas: cantidas,
+                cantidad: cantidad,
                 estado: estado,
                 valor: valor
             };
@@ -692,8 +692,8 @@
 
         // Generar texto CSV con cabeceras estándar
         function generateCSVString(dataArray) {
-            const header = 'ID;CLAVE;ARTICULO;CANTIDAS;ESTADO;VALOR';
-            const rows = dataArray.map(r => `${r.id};"${r.clave}";"${r.articulo}";${r.cantidas};"${r.estado}";${r.valor}`);
+            const header = 'ID;CLAVE;ARTICULO;cantidad;ESTADO;VALOR';
+            const rows = dataArray.map(r => `${r.id};"${r.clave}";"${r.articulo}";${r.cantidad};"${r.estado}";${r.valor}`);
             return [header, ...rows].join('\n');
         }
 
@@ -847,7 +847,7 @@
                     <td class="py-3 px-4 font-mono text-xs font-bold text-slate-500">#${rec.id}</td>
                     <td class="py-3 px-4 font-mono text-xs font-bold text-indigo-600">${escapeHtml(rec.clave)}</td>
                     <td class="py-3 px-4 font-medium text-slate-800">${escapeHtml(rec.articulo)}</td>
-                    <td class="py-3 px-4 text-center font-semibold text-slate-700">${rec.cantidas}</td>
+                    <td class="py-3 px-4 text-center font-semibold text-slate-700">${rec.cantidad}</td>
                     <td class="py-3 px-4 text-center">${getStatusBadge(rec.estado)}</td>
                     <td class="py-3 px-4 text-right font-semibold text-slate-800">$${formatNumber(rec.valor)}</td>
                 `;
@@ -875,8 +875,8 @@
         // Métrica en la parte superior
         function updateMetrics() {
             const totalItems = records.length;
-            const totalQty = records.reduce((sum, r) => sum + (parseInt(r.cantidas) || 0), 0);
-            const totalVal = records.reduce((sum, r) => sum + ((parseInt(r.cantidas) || 0) * (parseFloat(r.valor) || 0)), 0);
+            const totalQty = records.reduce((sum, r) => sum + (parseInt(r.cantidad) || 0), 0);
+            const totalVal = records.reduce((sum, r) => sum + ((parseInt(r.cantidad) || 0) * (parseFloat(r.valor) || 0)), 0);
 
             document.getElementById('stat-total-items').innerText = totalItems;
             document.getElementById('stat-total-qty').innerText = totalQty;
