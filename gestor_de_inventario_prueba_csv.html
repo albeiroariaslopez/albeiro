@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ingreso de Inventario - Google Sheets</title>
+  <title>Gestión de Inventario - Google Drive</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
 
   <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl border border-gray-100">
     <div class="mb-6 text-center">
-      <h2 class="text-2xl font-bold text-gray-800">Registro de Inventario</h2>
-      <p class="text-sm text-gray-500 mt-1">Ingresa los datos para agregarlos automáticamente a la hoja de cálculo</p>
+      <h2 class="text-2xl font-bold text-gray-800">Control de Inventario</h2>
+      <p class="text-sm text-gray-500 mt-1">Registra o actualiza elementos automáticamente en tu Google Sheet</p>
     </div>
 
     <form id="inventarioForm" class="space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-semibold text-gray-700">ID</label>
+          <label class="block text-sm font-semibold text-gray-700">ID *</label>
           <input type="text" id="id" required placeholder="Ej. 384" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
         <div>
@@ -27,7 +27,7 @@
       </div>
 
       <div>
-        <label class="block text-sm font-semibold text-gray-700">Artículo</label>
+        <label class="block text-sm font-semibold text-gray-700">Artículo *</label>
         <input type="text" id="articulo" required placeholder="Ej. FLEXOMETRO DE 8 MTS" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
       </div>
 
@@ -38,7 +38,7 @@
         </div>
         <div>
           <label class="block text-sm font-semibold text-gray-700">Estado</label>
-          <input type="text" id="estado" placeholder="Ej. Disponible" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <input type="text" id="estado" placeholder="Disponible" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
         <div>
           <label class="block text-sm font-semibold text-gray-700">Valor</label>
@@ -47,7 +47,7 @@
       </div>
 
       <button type="submit" id="btnGuardar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200 mt-2">
-        Guardar Registro en Google Drive
+        Guardar / Actualizar Registro
       </button>
     </form>
 
@@ -56,56 +56,57 @@
 
   <script>
     // ⚠️ REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQIYbVJh3cH4SFR0w6bw3kwYd0MhCk7Kta54b4JrrkhGzADJHhvagu-DUErelysxU/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQIYbVJh3cH4SFR0w6bw3kwYd0MhCk7Kta54b4JrrkhGzADJHhvagu-DUErelysxU/exec
+";
 
     document.getElementById('inventarioForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
+      e.preventDefault();
 
-  const btn = document.getElementById('btnGuardar');
-  const mensaje = document.getElementById('mensajeEstado');
+      const btn = document.getElementById('btnGuardar');
+      const mensaje = document.getElementById('mensajeEstado');
 
-  btn.disabled = true;
-  btn.textContent = 'Verificando datos...';
-  mensaje.classList.add('hidden');
+      btn.disabled = true;
+      btn.textContent = 'Procesando datos...';
+      mensaje.classList.add('hidden');
 
-  const datos = {
-    id: document.getElementById('id').value,
-    clave: document.getElementById('clave').value,
-    articulo: document.getElementById('articulo').value,
-    cantidad: document.getElementById('cantidad').value,
-    estado: document.getElementById('estado').value,
-    valor: document.getElementById('valor').value
-  };
+      const datos = {
+        id: document.getElementById('id').value,
+        clave: document.getElementById('clave').value,
+        articulo: document.getElementById('articulo').value,
+        cantidad: document.getElementById('cantidad').value,
+        estado: document.getElementById('estado').value,
+        valor: document.getElementById('valor').value
+      };
 
-  try {
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(datos)
+      try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(datos)
+        });
+
+        const res = await response.json();
+
+        if (res.result === 'created') {
+          mensaje.textContent = '✅ ' + res.message;
+          mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-green-100 text-green-700 block';
+          document.getElementById('inventarioForm').reset();
+        } else if (res.result === 'updated') {
+          mensaje.textContent = '🔄 ' + res.message;
+          mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-blue-100 text-blue-700 block';
+        } else {
+          mensaje.textContent = '❌ Error: ' + res.message;
+          mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-red-100 text-red-700 block';
+        }
+
+      } catch (error) {
+        mensaje.textContent = 'Hubo un error de conexión al procesar los datos.';
+        mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-red-100 text-red-700 block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar / Actualizar Registro';
+      }
     });
-
-    const res = await response.json();
-
-    if (res.result === 'success') {
-      mensaje.textContent = '¡Artículo registrado correctamente en Google Drive!';
-      mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-green-100 text-green-700 block';
-      document.getElementById('inventarioForm').reset();
-    } else if (res.result === 'duplicate') {
-      mensaje.textContent = '⚠️ Error: ' + res.message;
-      mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-yellow-100 text-yellow-800 border border-yellow-300 block';
-    } else {
-      mensaje.textContent = 'Error: ' + res.message;
-      mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-red-100 text-red-700 block';
-    }
-
-  } catch (error) {
-    mensaje.textContent = 'Hubo un problema de conexión al guardar el registro.';
-    mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-red-100 text-red-700 block';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Guardar Registro en Google Drive';
-  }
-});
   </script>
 
 </body>
