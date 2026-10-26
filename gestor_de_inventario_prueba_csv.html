@@ -165,7 +165,7 @@
                         <input type="text" id="articuloInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="Nombre de artículo">
                     </div>
 
-                    <!-- Row for CANTIDAD & VALOR -->
+                    <!-- Row for cantidad & VALOR -->
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label for="cantidadInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
@@ -474,7 +474,7 @@
             btn.disabled = true;
 
             try {
-                const url = `https://github.com/albeiroariaslopez/albeiro`;
+                const url = `https://api.github.com/repos/${owner}/${repo}/contents/${TARGET_FILE}?ref=${branch}`;
                 const res = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -535,7 +535,7 @@
             syncIcon.classList.add('animate-spin');
             updateConnectionBadge('syncing');
 
-            const url = `https://github.com/albeiroariaslopez/albeiro`;
+            const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${TARGET_FILE}?ref=${ghConfig.branch}`;
 
             try {
                 const response = await fetch(url, {
@@ -589,7 +589,7 @@
             
             if (lines.length === 0) return;
 
-            // Espera cabecera: ID;CLAVE;ARTICULO;CANTIDAD;ESTADO;VALOR
+            // Espera cabecera: ID;CLAVE;ARTICULO;cantidad;ESTADO;VALOR
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
@@ -707,7 +707,7 @@
             btnIcon.className = 'fa-solid fa-spinner animate-spin';
             btnText.innerText = 'Realizando Commit...';
 
-            const url = `https://github.com/albeiroariaslopez/albeiro`;
+            const url = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${TARGET_FILE}`;
             
             // Codificar a Base64 en UTF-8
             const base64Content = encodeBase64Utf8(fullCsvText);
