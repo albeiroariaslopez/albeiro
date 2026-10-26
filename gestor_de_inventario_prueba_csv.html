@@ -3,81 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ingreso de Datos - Prueba Google Drive</title>
+  <title>Ingreso de Inventario - Google Sheets</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
 
-  <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Registro de Datos</h2>
-    
-    <form id="dataForm" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Nombre completo</label>
-        <input type="text" id="nombre" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 focus:ring-blue-500">
+  <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl border border-gray-100">
+    <div class="mb-6 text-center">
+      <h2 class="text-2xl font-bold text-gray-800">Registro de Inventario</h2>
+      <p class="text-sm text-gray-500 mt-1">Ingresa los datos para agregarlos automáticamente a la hoja de cálculo</p>
+    </div>
+
+    <form id="inventarioForm" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700">ID</label>
+          <input type="text" id="id" required placeholder="Ej. 384" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700">Clave</label>
+          <input type="text" id="clave" placeholder="Ej. CLV-001" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
-        <input type="email" id="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 focus:ring-blue-500">
+        <label class="block text-sm font-semibold text-gray-700">Artículo</label>
+        <input type="text" id="articulo" required placeholder="Ej. FLEXOMETRO DE 8 MTS" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
       </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Observaciones</label>
-        <textarea id="observaciones" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:border-blue-500 focus:ring-blue-500"></textarea>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700">Cantidad</label>
+          <input type="number" step="any" id="cantidad" required placeholder="0.00" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700">Estado</label>
+          <input type="text" id="estado" placeholder="Ej. Disponible" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700">Valor</label>
+          <input type="number" step="any" id="valor" placeholder="0.00" class="mt-1 block w-full rounded-lg border-gray-300 border p-2.5 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
       </div>
 
-      <button type="submit" id="btnSubmit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">
-        Guardar en Google Drive
+      <button type="submit" id="btnGuardar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200 mt-2">
+        Guardar Registro en Google Drive
       </button>
     </form>
 
-    <div id="statusMessage" class="mt-4 text-center text-sm font-medium hidden"></div>
+    <div id="mensajeEstado" class="mt-4 p-3 rounded-lg text-center text-sm font-medium hidden"></div>
   </div>
 
   <script>
-    // REEMPLAZA ESTA URL CON LA QUE TE DIO GOOGLE APPS SCRIPT AL PUBLICAR
-    const WEB_APP_URL = "https://script.google.com/macros/s/TU_SCRIPT_ID_AQUI/exec";
+    // ⚠️ REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/TU_SCRIPT_ID_AQUI/exec";
 
-    document.getElementById('dataForm').addEventListener('submit', async function(e) {
+    document.getElementById('inventarioForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
-      const btn = document.getElementById('btnSubmit');
-      const status = document.getElementById('statusMessage');
+      const btn = document.getElementById('btnGuardar');
+      const mensaje = document.getElementById('mensajeEstado');
 
       btn.disabled = true;
-      btn.textContent = 'Enviando...';
-      status.classList.add('hidden');
+      btn.textContent = 'Enviando a Google Sheets...';
+      mensaje.classList.add('hidden');
 
-      const payload = {
-        nombre: document.getElementById('nombre').value,
-        email: document.getElementById('email').value,
-        observaciones: document.getElementById('observaciones').value
+      const datos = {
+        id: document.getElementById('id').value,
+        clave: document.getElementById('clave').value,
+        articulo: document.getElementById('articulo').value,
+        cantidad: document.getElementById('cantidad').value,
+        estado: document.getElementById('estado').value,
+        valor: document.getElementById('valor').value
       };
 
       try {
-        // Enviar datos mediante fetch (text/plain evita bloqueos de CORS en Apps Script)
-        await fetch(WEB_APP_URL, {
+        await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors',
+          mode: 'no-cors', // Necesario para saltar restricciones de CORS de Google
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(datos)
         });
 
-        status.textContent = "¡Datos guardados correctamente en Google Drive!";
-        status.className = "mt-4 text-center text-sm font-medium text-green-600";
-        status.classList.remove('hidden');
-        document.getElementById('dataForm').reset();
+        mensaje.textContent = '¡Artículo registrado correctamente en Google Drive!';
+        mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-green-100 text-green-700 block';
+        document.getElementById('inventarioForm').reset();
 
       } catch (error) {
-        status.textContent = "Error al guardar los datos.";
-        status.className = "mt-4 text-center text-sm font-medium text-red-600";
-        status.classList.remove('hidden');
+        mensaje.textContent = 'Hubo un error al registrar el artículo.';
+        mensaje.className = 'mt-4 p-3 rounded-lg text-center text-sm font-medium bg-red-100 text-red-700 block';
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Guardar en Google Drive';
+        btn.textContent = 'Guardar Registro en Google Drive';
       }
     });
   </script>
+
 </body>
 </html>
