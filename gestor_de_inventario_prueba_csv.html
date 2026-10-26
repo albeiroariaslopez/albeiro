@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Registros - Sistema de Inventario</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full text-slate-800 font-sans flex flex-col min-h-screen">
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600 rounded-lg text-white">
+                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none">Gestión de Inventario</h1>
+                    <span class="text-xs text-slate-400">Control de registros (prueba.csv)</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="document.getElementById('csvFileInput').click()" class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium py-2 px-3 sm:px-4 rounded-lg border border-slate-700 transition-colors">
+                    <i class="fa-solid fa-file-import text-indigo-400"></i>
+                    <span>Importar CSV</span>
+                </button>
+                <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="importCSV(event)">
+
+                <button onclick="exportCSV()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-medium py-2 px-3 sm:px-4 rounded-lg transition-colors shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Exportar CSV</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Stat Cards / Metrics Overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Artículos</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1" id="stat-total-items">0</p>
+                </div>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-list-check"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Unidades</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1" id="stat-total-qty">0</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-cubes"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Valor Total</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1" id="stat-total-value">$0.00</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-dollar-sign"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Activos</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1" id="stat-active-items">0</p>
+                </div>
+                <div class="w-12 h-12 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layout Grid: Form on Left/Top, Table on Right/Bottom -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Panel: Registration Form Card -->
+            <div class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden sticky top-24">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-indigo-600" id="form-icon"></i>
+                        <span id="form-title">Agregar Registro</span>
+                    </h2>
+                    <button id="cancel-edit-btn" onclick="resetForm()" class="hidden text-xs text-slate-500 hover:text-slate-700 bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded transition-colors">
+                        Cancelar Edición
+                    </button>
+                </div>
+
+                <form id="recordForm" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
+                    <!-- Campo oculto para indicar si estamos editando -->
+                    <input type="hidden" id="editingIndex" value="-1">
+
+                    <!-- Campo ID (Autogenerado, solo lectura) -->
+                    <div>
+                        <label for="idInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">ID (Autogenerado)</label>
+                        <div class="relative">
+                            <input type="text" id="idInput" readonly class="w-full bg-slate-100 border border-slate-200 rounded-lg py-2 px-3 text-slate-600 font-mono text-sm cursor-not-allowed focus:outline-none" placeholder="Auto">
+                            <i class="fa-solid fa-lock absolute right-3 top-2.5 text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+
+                    <!-- Campo CLAVE (Único y Obligatorio) -->
+                    <div>
+                        <label for="claveInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                            CLAVE <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" id="claveInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="Ej. PROD-001">
+                        <p class="text-[11px] text-slate-400 mt-1">Debe ser un código único e irrepetible.</p>
+                    </div>
+
+                    <!-- Campo ARTICULO (Obligatorio) -->
+                    <div>
+                        <label for="articuloInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                            ARTÍCULO <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" id="articuloInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="Nombre de artículo o descripción">
+                    </div>
+
+                    <!-- Row for CANTIDAS & VALOR -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="cantidasInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                                CANTIDAD <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number" min="0" step="1" id="cantidasInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="0">
+                        </div>
+                        <div>
+                            <label for="valorInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                                VALOR ($) <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="number" min="0" step="0.01" id="valorInput" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Campo ESTADO (Selección Desplegable) -->
+                    <div>
+                        <label for="estadoSelect" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                            ESTADO <span class="text-rose-500">*</span>
+                        </label>
+                        <select id="estadoSelect" required class="w-full border border-slate-300 rounded-lg py-2 px-3 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none bg-white">
+                            <option value="" disabled selected>Seleccione un estado</option>
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Disponible">Disponible</option>
+                            <option value="Agotado">Agotado</option>
+                        </select>
+                    </div>
+
+                    <!-- Actions Buttons -->
+                    <div class="pt-2 flex gap-2">
+                        <button type="submit" id="submit-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Guardar Registro</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Panel: Table and Data Management Card -->
+            <div class="lg:col-span-8 space-y-4">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    
+                    <!-- Table Header Controls -->
+                    <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="relative flex-1 max-w-md">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+                            <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Buscar por Clave, Artículo o Estado..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div class="flex items-center gap-2 justify-end">
+                            <button onclick="clearAllData()" class="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 font-medium px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span>Vaciar Todo</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table Wrapper -->
+                    <div class="overflow-x-auto min-h-[350px]">
+                        <table class="w-full text-left text-sm text-slate-600">
+                            <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[11px] tracking-wider border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3.5 px-4">ID</th>
+                                    <th class="py-3.5 px-4">CLAVE</th>
+                                    <th class="py-3.5 px-4">ARTÍCULO</th>
+                                    <th class="py-3.5 px-4 text-center">CANTIDAD</th>
+                                    <th class="py-3.5 px-4 text-center">ESTADO</th>
+                                    <th class="py-3.5 px-4 text-right">VALOR</th>
+                                    <th class="py-3.5 px-4 text-center">ACCIONES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-100">
+                                <!-- Filas generadas dinámicamente mediante JS -->
+                            </tbody>
+                        </table>
+
+                        <!-- Empty State -->
+                        <div id="emptyState" class="hidden py-16 text-center">
+                            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400 text-2xl">
+                                <i class="fa-solid fa-folder-open"></i>
+                            </div>
+                            <h3 class="font-medium text-slate-700 text-base">No hay registros</h3>
+                            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">No se han encontrado datos registrados o la búsqueda no arrojó resultados.</p>
+                        </div>
+                    </div>
+
+                    <!-- Table Footer / Pagination -->
+                    <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+                        <div>
+                            Mostrando <span id="page-start" class="font-semibold text-slate-700">0</span> a <span id="page-end" class="font-semibold text-slate-700">0</span> de <span id="total-filtered-count" class="font-semibold text-slate-700">0</span> registros
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="prev-page-btn" onclick="changePage(-1)" class="px-3 py-1.5 border border-slate-300 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <i class="fa-solid fa-chevron-left"></i> Anterior
+                            </button>
+                            <span id="page-indicator" class="font-medium text-slate-700 px-2">Página 1</span>
+                            <button id="next-page-btn" onclick="changePage(1)" class="px-3 py-1.5 border border-slate-300 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                Siguiente <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal de Confirmación para Eliminación -->
+    <div id="deleteModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl border border-slate-100 transform transition-all scale-100">
+            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center text-xl mb-4 mx-auto">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-bold text-center text-slate-800">¿Eliminar registro?</h3>
+            <p class="text-xs text-center text-slate-500 mt-2">Esta acción no se puede deshacer. ¿Está seguro de eliminar este ítem?</p>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeDeleteModal()" class="flex-1 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+                <button id="confirm-delete-btn" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium py-2 rounded-lg transition-colors shadow">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Clave del LocalStorage
+        const STORAGE_KEY = 'prueba_csv_records';
+        
+        // Estado global de la aplicación
+        let records = [];
+        let filteredRecords = [];
+        let currentPage = 1;
+        const itemsPerPage = 8;
+        let deleteTargetId = null;
+
+        // Inicialización
+        window.onload = function() {
+            loadRecords();
+            updateNextIdField();
+        };
+
+        // Cargar registros desde localStorage
+        function loadRecords() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    records = JSON.parse(data);
+                } catch (e) {
+                    records = [];
+                    showToast('Error al leer los datos almacenados', 'error');
+                }
+            } else {
+                // Registros por defecto de prueba inicial
+                records = [
+                    { id: 1, clave: 'ART-001', articulo: 'Teclado Mecánico RGB', cantidas: 15, estado: 'Disponible', valor: 45.50 },
+                    { id: 2, clave: 'ART-002', articulo: 'Mouse Inalámbrico', cantidas: 30, estado: 'Activo', valor: 22.00 },
+                    { id: 3, clave: 'ART-003', articulo: 'Monitor 24 pulgadas FHD', cantidas: 5, estado: 'Pendiente', valor: 180.00 }
+                ];
+                saveRecordsToStorage();
+            }
+            applyFilters();
+        }
+
+        // Guardar estado actual en localStorage
+        function saveRecordsToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+            updateMetrics();
+        }
+
+        // Obtener siguiente ID sugerido
+        function getNextAutoId() {
+            if (records.length === 0) return 1;
+            const maxId = Math.max(...records.map(r => parseInt(r.id) || 0));
+            return maxId + 1;
+        }
+
+        function updateNextIdField() {
+            const editingIdx = document.getElementById('editingIndex').value;
+            if (editingIdx === "-1") {
+                document.getElementById('idInput').value = getNextAutoId();
+            }
+        }
+
+        // Manejo de envío del Formulario (Creación / Edición)
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const editingIdx = parseInt(document.getElementById('editingIndex').value);
+            const clave = document.getElementById('claveInput').value.trim();
+            const articulo = document.getElementById('articuloInput').value.trim();
+            const cantidas = parseInt(document.getElementById('cantidasInput').value);
+            const estado = document.getElementById('estadoSelect').value;
+            const valor = parseFloat(document.getElementById('valorInput').value);
+
+            // Validaciones Estrictas
+            if (!clave || !articulo || isNaN(cantidas) || !estado || isNaN(valor)) {
+                showToast('Todos los campos son estrictamente obligatorios', 'error');
+                return;
+            }
+
+            // Validar que la CLAVE sea única
+            const duplicateIndex = records.findIndex(r => r.clave.toLowerCase() === clave.toLowerCase());
+            
+            if (editingIdx === -1) {
+                // Nuevo registro
+                if (duplicateIndex !== -1) {
+                    showToast(`La clave "${clave}" ya existe. Debe ser única.`, 'error');
+                    return;
+                }
+
+                const newRecord = {
+                    id: getNextAutoId(),
+                    clave: clave,
+                    articulo: articulo,
+                    cantidas: cantidas,
+                    estado: estado,
+                    valor: valor
+                };
+
+                records.push(newRecord);
+                showToast('Registro guardado exitosamente', 'success');
+            } else {
+                // Edición de registro
+                if (duplicateIndex !== -1 && duplicateIndex !== editingIdx) {
+                    showToast(`La clave "${clave}" ya está asignada a otro artículo.`, 'error');
+                    return;
+                }
+
+                records[editingIdx].clave = clave;
+                records[editingIdx].articulo = articulo;
+                records[editingIdx].cantidas = cantidas;
+                records[editingIdx].estado = estado;
+                records[editingIdx].valor = valor;
+
+                showToast('Registro actualizado correctamente', 'success');
+            }
+
+            saveRecordsToStorage();
+            resetForm();
+            applyFilters();
+        }
+
+        // Preparar formulario para edición
+        function editRecord(id) {
+            const idx = records.findIndex(r => r.id === id);
+            if (idx === -1) return;
+
+            const rec = records[idx];
+
+            document.getElementById('editingIndex').value = idx;
+            document.getElementById('idInput').value = rec.id;
+            document.getElementById('claveInput').value = rec.clave;
+            document.getElementById('articuloInput').value = rec.articulo;
+            document.getElementById('cantidasInput').value = rec.cantidas;
+            document.getElementById('estadoSelect').value = rec.estado;
+            document.getElementById('valorInput').value = rec.valor;
+
+            // Cambiar UI del formulario
+            document.getElementById('form-title').innerText = 'Editar Registro';
+            document.getElementById('form-icon').className = 'fa-solid fa-pen-to-square text-amber-500';
+            document.getElementById('submit-btn').className = 'flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-2.5 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-2';
+            document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i><span>Actualizar Registro</span>';
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Cancelar o reiniciar formulario
+        function resetForm() {
+            document.getElementById('recordForm').reset();
+            document.getElementById('editingIndex').value = "-1";
+
+            document.getElementById('form-title').innerText = 'Agregar Registro';
+            document.getElementById('form-icon').className = 'fa-solid fa-pen-to-square text-indigo-600';
+            document.getElementById('submit-btn').className = 'flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-2';
+            document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-plus"></i><span>Guardar Registro</span>';
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+
+            updateNextIdField();
+        }
+
+        // Confirmar y eliminar registro
+        function openDeleteModal(id) {
+            deleteTargetId = id;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('confirm-delete-btn').onclick = function() {
+                executeDelete();
+            };
+        }
+
+        function closeDeleteModal() {
+            deleteTargetId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function executeDelete() {
+            if (deleteTargetId !== null) {
+                records = records.filter(r => r.id !== deleteTargetId);
+                saveRecordsToStorage();
+                applyFilters();
+                showToast('Registro eliminado correctamente', 'info');
+                closeDeleteModal();
+                if (document.getElementById('editingIndex').value !== "-1") {
+                    resetForm();
+                }
+            }
+        }
+
+        // Vaciar la lista completa
+        function clearAllData() {
+            if (records.length === 0) {
+                showToast('No hay datos para eliminar', 'info');
+                return;
+            }
+            if (confirm('¿Está seguro de borrar TODOS los registros almacenados?')) {
+                records = [];
+                saveRecordsToStorage();
+                applyFilters();
+                resetForm();
+                showToast('Todos los datos fueron borrados', 'info');
+            }
+        }
+
+        // Filtro y búsqueda
+        function handleSearch() {
+            currentPage = 1;
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (!query) {
+                filteredRecords = [...records];
+            } else {
+                filteredRecords = records.filter(r => 
+                    r.clave.toLowerCase().includes(query) ||
+                    r.articulo.toLowerCase().includes(query) ||
+                    r.estado.toLowerCase().includes(query) ||
+                    r.id.toString().includes(query)
+                );
+            }
+            renderTable();
+            updateMetrics();
+        }
+
+        // Renderizar la tabla con paginación
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            tbody.innerHTML = '';
+
+            if (filteredRecords.length === 0) {
+                emptyState.classList.remove('hidden');
+                document.getElementById('page-start').innerText = '0';
+                document.getElementById('page-end').innerText = '0';
+                document.getElementById('total-filtered-count').innerText = '0';
+                document.getElementById('page-indicator').innerText = 'Página 0 de 0';
+                document.getElementById('prev-page-btn').disabled = true;
+                document.getElementById('next-page-btn').disabled = true;
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredRecords.length);
+            const pageData = filteredRecords.slice(startIndex, endIndex);
+
+            pageData.forEach(rec => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition-colors';
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-mono text-xs font-semibold text-slate-500">#${rec.id}</td>
+                    <td class="py-3 px-4 font-mono text-xs font-bold text-indigo-600">${escapeHtml(rec.clave)}</td>
+                    <td class="py-3 px-4 font-medium text-slate-800">${escapeHtml(rec.articulo)}</td>
+                    <td class="py-3 px-4 text-center font-semibold text-slate-700">${rec.cantidas}</td>
+                    <td class="py-3 px-4 text-center">${getStatusBadge(rec.estado)}</td>
+                    <td class="py-3 px-4 text-right font-semibold text-slate-800">$${formatNumber(rec.valor)}</td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editRecord(${rec.id})" title="Editar" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button onclick="openDeleteModal(${rec.id})" title="Eliminar" class="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Actualizar controles de paginación
+            document.getElementById('page-start').innerText = startIndex + 1;
+            document.getElementById('page-end').innerText = endIndex;
+            document.getElementById('total-filtered-count').innerText = filteredRecords.length;
+            document.getElementById('page-indicator').innerText = `Página ${currentPage} de ${totalPages}`;
+            document.getElementById('prev-page-btn').disabled = currentPage === 1;
+            document.getElementById('next-page-btn').disabled = currentPage === totalPages;
+        }
+
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderTable();
+            }
+        }
+
+        // Estilos para el estado
+        function getStatusBadge(estado) {
+            const statusMap = {
+                'Activo': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                'Disponible': 'bg-teal-100 text-teal-800 border-teal-200',
+                'Pendiente': 'bg-amber-100 text-amber-800 border-amber-200',
+                'Inactivo': 'bg-slate-100 text-slate-700 border-slate-200',
+                'Agotado': 'bg-rose-100 text-rose-800 border-rose-200'
+            };
+            const classes = statusMap[estado] || 'bg-slate-100 text-slate-700 border-slate-200';
+            return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${classes}">${escapeHtml(estado)}</span>`;
+        }
+
+        // Métrica en la parte superior
+        function updateMetrics() {
+            const totalItems = records.length;
+            const totalQty = records.reduce((sum, r) => sum + (parseInt(r.cantidas) || 0), 0);
+            const totalVal = records.reduce((sum, r) => sum + ((parseInt(r.cantidas) || 0) * (parseFloat(r.valor) || 0)), 0);
+            const activeItems = records.filter(r => r.estado === 'Activo' || r.estado === 'Disponible').length;
+
+            document.getElementById('stat-total-items').innerText = totalItems;
+            document.getElementById('stat-total-qty').innerText = totalQty;
+            document.getElementById('stat-total-value').innerText = `$${formatNumber(totalVal)}`;
+            document.getElementById('stat-active-items').innerText = activeItems;
+        }
+
+        // EXPORTACIÓN A CSV (Separado por ;)
+        function exportCSV() {
+            if (records.length === 0) {
+                showToast('No hay datos para exportar', 'info');
+                return;
+            }
+
+            // Formato especificado del archivo prueba.csv
+            const headers = ['ID', 'CLAVE', 'ARTICULO', 'CANTIDAS', 'ESTADO', 'VALOR'];
+            let csvContent = '\uFEFF'; // UTF-8 BOM para soporte de caracteres especiales en Excel
+            csvContent += headers.join(';') + '\r\n';
+
+            records.forEach(r => {
+                const row = [
+                    r.id,
+                    `"${(r.clave || '').replace(/"/g, '""')}"`,
+                    `"${(r.articulo || '').replace(/"/g, '""')}"`,
+                    r.cantidas,
+                    `"${(r.estado || '').replace(/"/g, '""')}"`,
+                    r.valor
+                ];
+                csvContent += row.join(';') + '\r\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'prueba.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Archivo CSV descargado correctamente', 'success');
+        }
+
+        // IMPORTACIÓN DESDE CSV
+        function importCSV(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const content = evt.target.result;
+                parseCSVAndImport(content);
+                // Reset del input file para poder subir de nuevo el mismo archivo si fuese necesario
+                e.target.value = '';
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseCSVAndImport(content) {
+            const lines = content.split(/\r\n|\n/);
+            if (lines.length <= 1) {
+                showToast('El archivo está vacío o no tiene el formato correcto', 'error');
+                return;
+            }
+
+            let successCount = 0;
+            let duplicateCount = 0;
+            let errorCount = 0;
+
+            // Determinar separador (coma o punto y coma)
+            const firstLine = lines[0];
+            const separator = firstLine.includes(';') ? ';' : ',';
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // Simple parser respetando comillas
+                const cols = parseCSVLine(line, separator);
+
+                if (cols.length >= 6) {
+                    const idVal = parseInt(cols[0]) || getNextAutoId();
+                    const claveVal = cols[1].trim();
+                    const articuloVal = cols[2].trim();
+                    const cantidasVal = parseInt(cols[3]) || 0;
+                    const estadoVal = cols[4].trim() || 'Disponible';
+                    const valorVal = parseFloat(cols[5]) || 0;
+
+                    if (!claveVal || !articuloVal) {
+                        errorCount++;
+                        continue;
+                    }
+
+                    // Verificar duplicado de clave
+                    const exists = records.some(r => r.clave.toLowerCase() === claveVal.toLowerCase());
+                    if (exists) {
+                        duplicateCount++;
+                    } else {
+                        records.push({
+                            id: idVal,
+                            clave: claveVal,
+                            articulo: articuloVal,
+                            cantidas: cantidasVal,
+                            estado: estadoVal,
+                            valor: valorVal
+                        });
+                        successCount++;
+                    }
+                } else {
+                    errorCount++;
+                }
+            }
+
+            saveRecordsToStorage();
+            applyFilters();
+            resetForm();
+
+            if (successCount > 0) {
+                showToast(`Se importaron ${successCount} registros exitosamente.`, 'success');
+            }
+            if (duplicateCount > 0) {
+                showToast(`${duplicateCount} registros omitidos por CLAVE duplicada.`, 'info');
+            }
+            if (errorCount > 0) {
+                showToast(`${errorCount} filas omitidas por formato inválido.`, 'error');
+            }
+        }
+
+        // Auxiliar para parsear CSV respetando comillas
+        function parseCSVLine(text, separator) {
+            const result = [];
+            let cell = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === separator && !inQuotes) {
+                    result.push(cell.replace(/^"|"$/g, '').trim());
+                    cell = '';
+                } else {
+                    cell += char;
+                }
+            }
+            result.push(cell.replace(/^"|"$/g, '').trim());
+            return result;
+        }
+
+        // Sistema de Notificaciones Toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const styles = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white',
+                info: 'bg-indigo-600 text-white'
+            };
+
+            const icons = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-exclamation',
+                info: 'fa-circle-info'
+            };
+
+            toast.className = `pointer-events-auto p-4 rounded-xl shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-y-2 opacity-0 text-xs sm:text-sm font-medium ${styles[type] || styles.info}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type]} text-base"></i>
+                <span class="flex-1">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Helpers de formato y escape de HTML
+        function formatNumber(num) {
+            return Number(num).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
