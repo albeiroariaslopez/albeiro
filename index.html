@@ -59,12 +59,23 @@
         </form>
     </div>
 
-    <!-- Tabla de Registros -->
+    <!-- Tabla de Registros y Búsqueda -->
     <div class="table-responsive shadow-sm p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="m-0">Registros Actuales</h5>
-            <button class="btn btn-outline-primary btn-sm" onclick="loadData()">🔄 Cargar / Refrescar</button>
+        <div class="row align-items-center mb-3 g-2">
+            <div class="col-md-6 col-12">
+                <h5 class="m-0">Registros Actuales</h5>
+            </div>
+            <div class="col-md-6 col-12 d-flex justify-content-end align-items-center gap-2">
+                <!-- Campo y botón de búsqueda -->
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Buscar por Clave, Artículo..." onkeyup="if(event.key === 'Enter') filterData()">
+                    <button class="btn btn-primary" type="button" onclick="filterData()">🔍 Buscar</button>
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">Limpiar</button>
+                </div>
+                <button class="btn btn-outline-primary btn-sm flex-shrink-0" onclick="loadData()">🔄 Refrescar</button>
+            </div>
         </div>
+
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
@@ -83,15 +94,27 @@
                 </tr>
             </tbody>
         </table>
+
+        <!-- Paginación -->
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+            <div class="small text-muted" id="paginationInfo">Mostrando 0 - 0 de 0 registros</div>
+            <nav>
+                <ul class="pagination pagination-sm m-0" id="paginationControls"></ul>
+            </nav>
+        </div>
     </div>
 </div>
 
 <script>
-    // REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgJJW8mwNjciSBEiWTDLskgw1-ByPfPj12_AVE-q9OBSc73Nr89hCk1nLsjwa_MOA/exec";
 
     let recordsData = [];
+    let filteredData = [];
     let isEditing = false;
+
+    // Configuración de paginación
+    const ITEMS_PER_PAGE = 10;
+    let currentPage = 1;
 
     document.addEventListener("DOMContentLoaded", () => {
         loadData();
@@ -102,7 +125,9 @@
         try {
             const response = await fetch(SCRIPT_URL);
             recordsData = await response.json();
-            renderTable(recordsData);
+            filteredData = [...recordsData];
+            currentPage = 1;
+            renderCurrentPage();
         } catch (error) {
             console.error("Error al cargar los datos:", error);
             document.getElementById('tableBody').innerHTML = `
@@ -111,24 +136,63 @@
         }
     }
 
-    // Renderizar registros en la tabla
-    function renderTable(data) {
+    // Filtrar/Buscar registros
+    function filterData() {
+        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+        if (!query) {
+            filteredData = [...recordsData];
+        } else {
+            filteredData = recordsData.filter(row => {
+                return (
+                    String(row.ID || '').toLowerCase().includes(query) ||
+                    String(row.CLAVE || '').toLowerCase().includes(query) ||
+                    String(row.ARTICULO || '').toLowerCase().includes(query) ||
+                    String(row.ESTADO || '').toLowerCase().includes(query)
+                );
+            });
+        }
+        currentPage = 1;
+        renderCurrentPage();
+    }
+
+    // Limpiar campo de búsqueda
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        filteredData = [...recordsData];
+        currentPage = 1;
+        renderCurrentPage();
+    }
+
+    // Renderizar la página actual de la tabla
+    function renderCurrentPage() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
 
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center">No hay registros almacenados.</td></tr>`;
+        if (!filteredData || filteredData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center">No se encontraron registros.</td></tr>`;
+            document.getElementById('paginationInfo').innerText = 'Mostrando 0 de 0 registros';
+            document.getElementById('paginationControls').innerHTML = '';
             return;
         }
 
-        data.forEach(row => {
+        const totalItems = filteredData.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+        const pageData = filteredData.slice(startIndex, endIndex);
+
+        pageData.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.ID || ''}</td>
                 <td><strong>${row.CLAVE || ''}</strong></td>
                 <td>${row.ARTICULO || ''}</td>
                 <td>${row.CANTIDAD || 0}</td>
-                <td><span class="badge ${row.ESTADO === 'Bueno' ? 'bg-success' : 'bg-warning'}">${row.ESTADO || ''}</span></td>
+                <td><span class="badge ${row.ESTADO === 'Bueno' ? 'bg-success' : (row.ESTADO === 'Regular' ? 'bg-warning text-dark' : 'bg-danger')}">${row.ESTADO || ''}</span></td>
                 <td>$${Number(row.VALOR || 0).toLocaleString()}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-warning" onclick="editRecord('${row.CLAVE}')">Editar</button>
@@ -136,6 +200,45 @@
             `;
             tbody.appendChild(tr);
         });
+
+        // Actualizar contador
+        document.getElementById('paginationInfo').innerText = `Mostrando ${startIndex + 1} - ${endIndex} de ${totalItems} registros`;
+
+        // Renderizar controles de paginación
+        renderPagination(totalPages);
+    }
+
+    // Construir botones de paginación
+    function renderPagination(totalPages) {
+        const navUl = document.getElementById('paginationControls');
+        navUl.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Botón Anterior
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Anterior</a>`;
+        navUl.appendChild(prevLi);
+
+        // Páginas numeradas
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>`;
+            navUl.appendChild(li);
+        }
+
+        // Botón Siguiente
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Siguiente</a>`;
+        navUl.appendChild(nextLi);
+    }
+
+    function changePage(page) {
+        currentPage = page;
+        renderCurrentPage();
     }
 
     // Guardar nuevo registro o actualización
@@ -144,7 +247,6 @@
 
         const claveVal = document.getElementById('claveInput').value.trim();
         
-        // Validación frontend de CLAVE única en modo 'Agregar'
         if (!isEditing) {
             const exists = recordsData.some(r => String(r.CLAVE).toLowerCase() === claveVal.toLowerCase());
             if (exists) {
@@ -171,7 +273,7 @@
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'cors',
-                headers: { 'Content-Type': 'text/plain' }, // Necesario para evitar problemas de preflight CORS con Apps Script
+                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify(payload)
             });
 
@@ -204,7 +306,7 @@
         
         document.getElementById('idInput').value = record.ID || '';
         document.getElementById('claveInput').value = record.CLAVE || '';
-        document.getElementById('claveInput').readOnly = true; // La CLAVE no se edita por ser el ID único
+        document.getElementById('claveInput').readOnly = true;
         document.getElementById('articuloInput').value = record.ARTICULO || '';
         document.getElementById('cantidadInput').value = record.CANTIDAD || '';
         document.getElementById('estadoInput').value = record.ESTADO || 'Bueno';
