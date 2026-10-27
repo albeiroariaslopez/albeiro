@@ -38,9 +38,9 @@
                 <div class="col-md-4">
                     <label for="estadoInput" class="form-label">ESTADO</label>
                     <select class="form-select" id="estadoInput" required>
-                        <option value="Disponible">Bueno</option>
-                        <option value="Agotado">Regular</option>
-                        <option value="En Proceso">Malo</option>
+                        <option value="Bueno">Bueno</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Malo">Malo</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -128,7 +128,7 @@
                 <td><strong>${row.CLAVE || ''}</strong></td>
                 <td>${row.ARTICULO || ''}</td>
                 <td>${row.CANTIDAD || 0}</td>
-                <td><span class="badge ${row.ESTADO === 'Disponible' ? 'bg-success' : 'bg-warning'}">${row.ESTADO || ''}</span></td>
+                <td><span class="badge ${row.ESTADO === 'Bueno' ? 'bg-success' : 'bg-warning'}">${row.ESTADO || ''}</span></td>
                 <td>$${Number(row.VALOR || 0).toLocaleString()}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-warning" onclick="editRecord('${row.CLAVE}')">Editar</button>
@@ -207,7 +207,7 @@
         document.getElementById('claveInput').readOnly = true; // La CLAVE no se edita por ser el ID único
         document.getElementById('articuloInput').value = record.ARTICULO || '';
         document.getElementById('cantidadInput').value = record.CANTIDAD || '';
-        document.getElementById('estadoInput').value = record.ESTADO || 'Disponible';
+        document.getElementById('estadoInput').value = record.ESTADO || 'Bueno';
         document.getElementById('valorInput').value = record.VALOR || '';
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
