@@ -3,341 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Inventario</title>
-    <!-- CSS de Bootstrap 5 -->
+    <title>Sistema de Gestión de Inventario</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f8f9fa; }
-        .card { border-radius: 10px; border: none; }
-        .table-responsive { background: #fff; border-radius: 10px; }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
-<body>
+<body class="bg-light">
 
-<div class="container py-5">
-    <h2 class="mb-4 text-primary text-center">Gestión de Registros (Prueba)</h2>
-
-    <!-- Formulario para Agregar/Editar -->
-    <div class="card shadow-sm p-4 mb-5">
-        <h5 class="card-title mb-3" id="formTitle">Agregar Nuevo Registro</h5>
-        <form id="dataForm">
-            <input type="hidden" id="idInput" name="ID">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label for="claveInput" class="form-label">CLAVE <span class="text-danger">* (Única)</span></label>
-                    <input type="text" class="form-control" id="claveInput" required>
+    <!-- Pantalla de Login -->
+    <div id="loginSection" class="container mt-5" style="max-width: 400px;">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4"><i class="bi bi-shield-lock"></i> Acceso al Sistema</h3>
+                <div class="mb-3">
+                    <label for="passwordInput" class="form-label">Contraseña de Acceso</label>
+                    <input type="password" class="form-control" id="passwordInput" placeholder="Ingrese su clave">
                 </div>
-                <div class="col-md-4">
-                    <label for="articuloInput" class="form-label">ARTICULO</label>
-                    <input type="text" class="form-control" id="articuloInput" required>
-                </div>
-                <div class="col-md-4">
-                    <label for="cantidadInput" class="form-label">CANTIDAD</label>
-                    <input type="number" class="form-control" id="cantidadInput" required>
-                </div>
-                <div class="col-md-4">
-                    <label for="estadoInput" class="form-label">ESTADO</label>
-                    <select class="form-select" id="estadoInput" required>
-                        <option value="Bueno">Bueno</option>
-                        <option value="Regular">Regular</option>
-                        <option value="Malo">Malo</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="valorInput" class="form-label">VALOR</label>
-                    <input type="number" step="0.01" class="form-control" id="valorInput" required>
-                </div>
+                <button onclick="verificarAcceso()" class="btn btn-primary w-100">Ingresar</button>
+                <div id="loginError" class="text-danger mt-3 text-center" style="display: none;"></div>
             </div>
-
-            <div class="mt-4 text-end">
-                <button type="button" class="btn btn-secondary me-2 d-none" id="btnCancel" onclick="resetForm()">Cancelar</button>
-                <button type="submit" class="btn btn-primary" id="btnSave">
-                    <span class="spinner-border spinner-border-sm me-2 d-none" id="saveSpinner" role="status"></span>
-                    <span id="btnSaveText">Agregar Registro</span>
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 
-    <!-- Tabla de Registros y Búsqueda -->
-    <div class="table-responsive shadow-sm p-3">
-        <div class="row align-items-center mb-3 g-2">
-            <div class="col-md-6 col-12">
-                <h5 class="m-0">Registros Actuales</h5>
-            </div>
-            <div class="col-md-6 col-12 d-flex justify-content-end align-items-center gap-2">
-                <!-- Campo y botón de búsqueda -->
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control" id="searchInput" placeholder="Buscar por Clave, Artículo..." onkeyup="if(event.key === 'Enter') filterData()">
-                    <button class="btn btn-primary" type="button" onclick="filterData()">🔍 Buscar</button>
-                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">Limpiar</button>
-                </div>
-                <button class="btn btn-outline-primary btn-sm flex-shrink-0" onclick="loadData()">🔄 Refrescar</button>
+    <!-- Panel de Inventario (Oculto hasta iniciar sesión) -->
+    <div id="appSection" class="container py-4" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-boxes"></i> Gestión de Inventario</h2>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevo"><i class="bi bi-plus-circle"></i> Nuevo Producto</button>
+        </div>
+
+        <!-- Buscador -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <input type="text" id="searchInput" class="form-control" placeholder="Buscar por código, producto o categoría..." onkeyup="filtrarTabla()">
             </div>
         </div>
 
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>CLAVE</th>
-                    <th>ARTÍCULO</th>
-                    <th>CANTIDAD</th>
-                    <th>ESTADO</th>
-                    <th>VALOR</th>
-                    <th class="text-center">ACCIONES</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                <tr>
-                    <td colspan="7" class="text-center py-4">Cargando datos desde Google Sheets...</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <!-- Paginación -->
-        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-            <div class="small text-muted" id="paginationInfo">Mostrando 0 - 0 de 0 registros</div>
-            <nav>
-                <ul class="pagination pagination-sm m-0" id="paginationControls"></ul>
-            </nav>
+        <!-- Tabla de Datos -->
+        <div class="card shadow-sm">
+            <div class="card-body table-responsive">
+                <table class="table table-hover align-middle" id="inventoryTable">
+                    <thead class="table-dark">
+                        <tr>
+                            ID, Código, Producto, Categoría, Stock, Precio ($), Proveedor, Actualizado
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Datos cargados dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzgJJW8mwNjciSBEiWTDLskgw1-ByPfPj12_AVE-q9OBSc73Nr89hCk1nLsjwa_MOA/exec";
+    <!-- Modal Nuevo Producto -->
+    <div class="modal fade" id="modalNuevo" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar Nuevo Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productForm">
+                        <div class="mb-3">
+                            <label class="form-label">Código</label>
+                            <input type="text" class="form-control" id="codigo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del Producto</label>
+                            <input type="text" class="form-control" id="producto" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <input type="text" class="form-control" id="categoria" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stock Inicial</label>
+                            <input type="number" class="form-control" id="stock" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precio</label>
+                            <input type="number" step="0.01" class="form-control" id="precio" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Proveedor</label>
+                            <input type="text" class="form-control" id="proveedor" required>
+                        </div>
+                        <button type="button" onclick="guardarProducto()" class="btn btn-primary w-100">Guardar Producto</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    let recordsData = [];
-    let filteredData = [];
-    let isEditing = false;
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // CONFIGURACIÓN: Reemplaza esta URL con la URL de tu Web App de Google Apps Script
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxscg9-8rvQcDRusvVoeL_-eLTvyzSSVVsOXejPYtdmzwt8UBxzD4F-3VcrigPdqA/exec";
+        let globalPassword = "";
+        let inventoryData = [];
 
-    // Configuración de paginación
-    const ITEMS_PER_PAGE = 10;
-    let currentPage = 1;
-
-    document.addEventListener("DOMContentLoaded", () => {
-        loadData();
-    });
-
-    // Obtener datos desde Google Sheets
-    async function loadData() {
-        try {
-            const response = await fetch(SCRIPT_URL);
-            recordsData = await response.json();
-            filteredData = [...recordsData];
-            currentPage = 1;
-            renderCurrentPage();
-        } catch (error) {
-            console.error("Error al cargar los datos:", error);
-            document.getElementById('tableBody').innerHTML = `
-                <tr><td colspan="7" class="text-center text-danger">Error al cargar datos desde la hoja de cálculo.</td></tr>
-            `;
+        async function verificarAcceso() {
+            const pass = document.getElementById("passwordInput").value;
+            globalPassword = pass;
+            
+            // Intentar cargar datos para validar contraseña
+            try {
+                const response = await fetch(`${WEB_APP_URL}?action=getData`);
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    // Validamos haciendo un POST rápido o validando contra el backend
+                    inventoryData = result.data;
+                    renderTable(inventoryData);
+                    document.getElementById("loginSection").style.display = "none";
+                    document.getElementById("appSection").style.display = "block";
+                } else {
+                    mostrarError("Error al conectar con la base de datos.");
+                }
+            } catch (error) {
+                mostrarError("Credenciales incorrectas o error de conexión.");
+            }
         }
-    }
 
-    // Filtrar/Buscar registros
-    function filterData() {
-        const query = document.getElementById('searchInput').value.trim().toLowerCase();
-        if (!query) {
-            filteredData = [...recordsData];
-        } else {
-            filteredData = recordsData.filter(row => {
-                return (
-                    String(row.ID || '').toLowerCase().includes(query) ||
-                    String(row.CLAVE || '').toLowerCase().includes(query) ||
-                    String(row.ARTICULO || '').toLowerCase().includes(query) ||
-                    String(row.ESTADO || '').toLowerCase().includes(query)
-                );
+        function mostrarError(msg) {
+            const errDiv = document.getElementById("loginError");
+            errDiv.innerText = msg;
+            errDiv.style.display = "block";
+        }
+
+        async function cargarInventario() {
+            try {
+                const response = await fetch(`${WEB_APP_URL}?action=getData`);
+                const result = await response.json();
+                if (result.status === "success") {
+                    inventoryData = result.data;
+                    renderTable(inventoryData);
+                }
+            } catch (e) {
+                console.error("Error cargando datos", e);
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById("tableBody");
+            tbody.innerHTML = "";
+            data.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.id || ''}</td>
+                        <td><strong>${item.codigo || ''}</strong></td>
+                        <td>${item.producto || ''}</td>
+                        <td><span class="badge bg-secondary">${item.categoria || ''}</span></td>
+                        <td>${item.stock || 0}</td>
+                        <td>$ ${Number(item.precio || 0).toLocaleString()}</td>
+                        <td>${item.proveedor || ''}</td>
+                        <td>${item.actualizado || ''}</td>
+                    </tr>
+                `;
             });
         }
-        currentPage = 1;
-        renderCurrentPage();
-    }
 
-    // Limpiar campo de búsqueda
-    function clearSearch() {
-        document.getElementById('searchInput').value = '';
-        filteredData = [...recordsData];
-        currentPage = 1;
-        renderCurrentPage();
-    }
-
-    // Renderizar la página actual de la tabla
-    function renderCurrentPage() {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-
-        if (!filteredData || filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center">No se encontraron registros.</td></tr>`;
-            document.getElementById('paginationInfo').innerText = 'Mostrando 0 de 0 registros';
-            document.getElementById('paginationControls').innerHTML = '';
-            return;
+        function filtrarTabla() {
+            const term = document.getElementById("searchInput").value.toLowerCase();
+            const filtered = inventoryData.filter(item => 
+                String(item.codigo).toLowerCase().includes(term) ||
+                String(item.producto).toLowerCase().includes(term) ||
+                String(item.categoria).toLowerCase().includes(term)
+            );
+            renderTable(filtered);
         }
 
-        const totalItems = filteredData.length;
-        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+        async function guardarProducto() {
+            const nuevo = {
+                action: "add",
+                password: globalPassword,
+                codigo: document.getElementById("codigo").value,
+                producto: document.getElementById("producto").value,
+                categoria: document.getElementById("categoria").value,
+                stock: document.getElementById("stock").value,
+                precio: document.getElementById("precio").value,
+                proveedor: document.getElementById("proveedor").value
+            };
 
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
-        const pageData = filteredData.slice(startIndex, endIndex);
-
-        pageData.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.ID || ''}</td>
-                <td><strong>${row.CLAVE || ''}</strong></td>
-                <td>${row.ARTICULO || ''}</td>
-                <td>${row.CANTIDAD || 0}</td>
-                <td><span class="badge ${row.ESTADO === 'Bueno' ? 'bg-success' : (row.ESTADO === 'Regular' ? 'bg-warning text-dark' : 'bg-danger')}">${row.ESTADO || ''}</span></td>
-                <td>$${Number(row.VALOR || 0).toLocaleString()}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-outline-warning" onclick="editRecord('${row.CLAVE}')">Editar</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Actualizar contador
-        document.getElementById('paginationInfo').innerText = `Mostrando ${startIndex + 1} - ${endIndex} de ${totalItems} registros`;
-
-        // Renderizar controles de paginación
-        renderPagination(totalPages);
-    }
-
-    // Construir botones de paginación
-    function renderPagination(totalPages) {
-        const navUl = document.getElementById('paginationControls');
-        navUl.innerHTML = '';
-
-        if (totalPages <= 1) return;
-
-        // Botón Anterior
-        const prevLi = document.createElement('li');
-        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Anterior</a>`;
-        navUl.appendChild(prevLi);
-
-        // Páginas numeradas
-        for (let i = 1; i <= totalPages; i++) {
-            const li = document.createElement('li');
-            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-            li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>`;
-            navUl.appendChild(li);
-        }
-
-        // Botón Siguiente
-        const nextLi = document.createElement('li');
-        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Siguiente</a>`;
-        navUl.appendChild(nextLi);
-    }
-
-    function changePage(page) {
-        currentPage = page;
-        renderCurrentPage();
-    }
-
-    // Guardar nuevo registro o actualización
-    document.getElementById('dataForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-
-        const claveVal = document.getElementById('claveInput').value.trim();
-        
-        if (!isEditing) {
-            const exists = recordsData.some(r => String(r.CLAVE).toLowerCase() === claveVal.toLowerCase());
-            if (exists) {
-                alert('La CLAVE ingresada ya existe. Debe ser un valor único.');
-                return;
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: "POST",
+                    body: JSON.stringify(nuevo)
+                });
+                const result = await response.json();
+                if (result.status === "success") {
+                    alert("¡Producto registrado con éxito!");
+                    location.reload();
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (e) {
+                alert("Error de red al registrar el producto.");
             }
         }
-
-        const payload = {
-            action: isEditing ? 'edit' : 'add',
-            record: {
-                ID: document.getElementById('idInput').value,
-                CLAVE: claveVal,
-                ARTICULO: document.getElementById('articuloInput').value.trim(),
-                CANTIDAD: parseInt(document.getElementById('cantidadInput').value),
-                ESTADO: document.getElementById('estadoInput').value,
-                VALOR: parseFloat(document.getElementById('valorInput').value)
-            }
-        };
-
-        setLoading(true);
-
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
-            });
-
-            const res = await response.json();
-
-            if (res.status === 'success') {
-                alert(res.message);
-                resetForm();
-                await loadData();
-            } else {
-                alert('Error: ' + res.message);
-            }
-        } catch (err) {
-            console.error('Error al guardar datos:', err);
-            alert('Ocurrió un error al guardar los datos.');
-        } finally {
-            setLoading(false);
-        }
-    });
-
-    // Preparar formulario para edición
-    function editRecord(clave) {
-        const record = recordsData.find(r => String(r.CLAVE) === String(clave));
-        if (!record) return;
-
-        isEditing = true;
-        document.getElementById('formTitle').innerText = "Guardar Modificaciones del Registro";
-        document.getElementById('btnSaveText').innerText = "Guardar Cambios";
-        document.getElementById('btnCancel').classList.remove('d-none');
-        
-        document.getElementById('idInput').value = record.ID || '';
-        document.getElementById('claveInput').value = record.CLAVE || '';
-        document.getElementById('claveInput').readOnly = true;
-        document.getElementById('articuloInput').value = record.ARTICULO || '';
-        document.getElementById('cantidadInput').value = record.CANTIDAD || '';
-        document.getElementById('estadoInput').value = record.ESTADO || 'Bueno';
-        document.getElementById('valorInput').value = record.VALOR || '';
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Resetear formulario
-    function resetForm() {
-        isEditing = false;
-        document.getElementById('dataForm').reset();
-        document.getElementById('formTitle').innerText = "Agregar Nuevo Registro";
-        document.getElementById('btnSaveText').innerText = "Agregar Registro";
-        document.getElementById('btnCancel').classList.add('d-none');
-        document.getElementById('claveInput').readOnly = false;
-        document.getElementById('idInput').value = '';
-    }
-
-    function setLoading(loading) {
-        const spinner = document.getElementById('saveSpinner');
-        const btn = document.getElementById('btnSave');
-        if (loading) {
-            spinner.classList.remove('d-none');
-            btn.disabled = true;
-        } else {
-            spinner.classList.add('d-none');
-            btn.disabled = false;
-        }
-    }
-</script>
-
+    </script>
 </body>
 </html>
