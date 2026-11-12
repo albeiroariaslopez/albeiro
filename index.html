@@ -4,53 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gestión de Inventario</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
 
     <!-- Pantalla de Login -->
-    <div id="loginSection" class="container mt-5" style="max-width: 400px;">
-        <div class="card shadow">
+    <div id="loginSection" class="container mt-5" style="max-width: 420px;">
+        <div class="card shadow border-0">
             <div class="card-body p-4">
-                <h3 class="text-center mb-4"><i class="bi bi-shield-lock"></i> Acceso al Sistema</h3>
-                <div class="mb-3">
-                    <label for="passwordInput" class="form-label">Contraseña de Acceso</label>
-                    <input type="password" class="form-control" id="passwordInput" placeholder="Ingrese su clave">
-                </div>
-                <button onclick="verificarAcceso()" class="btn btn-primary w-100">Ingresar</button>
-                <div id="loginError" class="text-danger mt-3 text-center" style="display: none;"></div>
+                <h3 class="text-center mb-4"><i class="bi bi-shield-lock text-primary"></i> Control de Acceso</h3>
+                <form onsubmit="iniciarSesion(event)">
+                    <div class="mb-3">
+                        <label for="userInput" class="form-label">Usuario</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="userInput" placeholder="Ej. admin" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="passwordInput" class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-key"></i></span>
+                            <input type="password" class="form-control" id="passwordInput" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    <button type="submit" id="btnLogin" class="btn btn-primary w-100">Ingresar al Sistema</button>
+                </form>
+                <div id="loginError" class="alert alert-danger mt-3 py-2 text-center" style="display: none;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Panel de Inventario (Oculto hasta iniciar sesión) -->
+    <!-- Panel de Inventario -->
     <div id="appSection" class="container py-4" style="display: none;">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="bi bi-boxes"></i> Gestión de Inventario</h2>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevo"><i class="bi bi-plus-circle"></i> Nuevo Producto</button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+            <div>
+                <h2 class="mb-0"><i class="bi bi-boxes text-primary"></i> Gestión de Inventario</h2>
+                <small class="text-muted">Sesión iniciada como: <strong id="lblUsuario"></strong> (<span id="lblRol"></span>)</small>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevo">
+                    <i class="bi bi-plus-circle"></i> Nuevo Producto
+                </button>
+                <button class="btn btn-outline-danger" onclick="cerrarSesion()">
+                    <i class="bi bi-box-arrow-right"></i> Salir
+                </button>
+            </div>
         </div>
 
         <!-- Buscador -->
-        <div class="card mb-4 shadow-sm">
+        <div class="card mb-4 shadow-sm border-0">
             <div class="card-body">
-                <input type="text" id="searchInput" class="form-control" placeholder="Buscar por código, producto o categoría..." onkeyup="filtrarTabla()">
+                <input type="text" id="searchInput" class="form-control" placeholder="Buscar por código, producto, categoría o proveedor..." onkeyup="filtrarTabla()">
             </div>
         </div>
 
         <!-- Tabla de Datos -->
-        <div class="card shadow-sm">
+        <div class="card shadow-sm border-0">
             <div class="card-body table-responsive">
                 <table class="table table-hover align-middle" id="inventoryTable">
                     <thead class="table-dark">
                         <tr>
-                            ID, Código, Producto, Categoría, Stock, Precio ($), Proveedor, Actualizado
+                            <th>ID</th>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Stock</th>
+                            <th>Precio ($)</th>
+                            <th>Proveedor</th>
+                            <th>Actualizado</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <!-- Datos cargados dinámicamente -->
-                    </tbody>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -65,7 +91,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="productForm">
+                    <form id="productForm" onsubmit="guardarProducto(event)">
                         <div class="mb-3">
                             <label class="form-label">Código</label>
                             <input type="text" class="form-control" id="codigo" required>
@@ -90,61 +116,73 @@
                             <label class="form-label">Proveedor</label>
                             <input type="text" class="form-control" id="proveedor" required>
                         </div>
-                        <button type="button" onclick="guardarProducto()" class="btn btn-primary w-100">Guardar Producto</button>
+                        <button type="submit" id="btnGuardar" class="btn btn-primary w-100">Guardar Producto</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // CONFIGURACIÓN: Reemplaza esta URL con la URL de tu Web App de Google Apps Script
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxscg9-8rvQcDRusvVoeL_-eLTvyzSSVVsOXejPYtdmzwt8UBxzD4F-3VcrigPdqA/exec";
-        let globalPassword = "";
+        // REEMPLAZA CON LA NUEVA URL DE TU IMPLEMENTACIÓN DE APPS SCRIPT
+        const WEB_APP_URL = "https://script.google.com/macros/library/d/17dqeNT1QDo1HijbGC_8OREifaVJLEEcLOwCsK0miivyrx9vJu74rDA2U/1";
+        
+        let sessionCreds = { usuario: "", password: "" };
         let inventoryData = [];
 
-        async function verificarAcceso() {
-            const pass = document.getElementById("passwordInput").value;
-            globalPassword = pass;
-            
-            // Intentar cargar datos para validar contraseña
+        async function iniciarSesion(e) {
+            e.preventDefault();
+            const usuario = document.getElementById("userInput").value;
+            const password = document.getElementById("passwordInput").value;
+            const btn = document.getElementById("btnLogin");
+            const errDiv = document.getElementById("loginError");
+
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
+            errDiv.style.display = "none";
+
             try {
-                const response = await fetch(`${WEB_APP_URL}?action=getData`);
+                const response = await fetch(WEB_APP_URL, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        action: "login",
+                        usuario: usuario,
+                        password: password
+                    })
+                });
                 const result = await response.json();
-                
+
                 if (result.status === "success") {
-                    // Validamos haciendo un POST rápido o validando contra el backend
+                    sessionCreds = { usuario, password };
                     inventoryData = result.data;
+                    
+                    document.getElementById("lblUsuario").innerText = result.usuario;
+                    document.getElementById("lblRol").innerText = result.rol;
+                    
                     renderTable(inventoryData);
                     document.getElementById("loginSection").style.display = "none";
                     document.getElementById("appSection").style.display = "block";
                 } else {
-                    mostrarError("Error al conectar con la base de datos.");
+                    errDiv.innerText = result.message;
+                    errDiv.style.display = "block";
                 }
             } catch (error) {
-                mostrarError("Credenciales incorrectas o error de conexión.");
+                errDiv.innerText = "Error de conexión con el servidor de Google Apps Script.";
+                errDiv.style.display = "block";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Ingresar al Sistema";
             }
         }
 
-        function mostrarError(msg) {
-            const errDiv = document.getElementById("loginError");
-            errDiv.innerText = msg;
-            errDiv.style.display = "block";
-        }
-
-        async function cargarInventario() {
-            try {
-                const response = await fetch(`${WEB_APP_URL}?action=getData`);
-                const result = await response.json();
-                if (result.status === "success") {
-                    inventoryData = result.data;
-                    renderTable(inventoryData);
-                }
-            } catch (e) {
-                console.error("Error cargando datos", e);
-            }
+        function cerrarSesion() {
+            sessionCreds = { usuario: "", password: "" };
+            inventoryData = [];
+            document.getElementById("userInput").value = "";
+            document.getElementById("passwordInput").value = "";
+            document.getElementById("appSection").style.display = "none";
+            document.getElementById("loginSection").style.display = "block";
         }
 
         function renderTable(data) {
@@ -171,15 +209,22 @@
             const filtered = inventoryData.filter(item => 
                 String(item.codigo).toLowerCase().includes(term) ||
                 String(item.producto).toLowerCase().includes(term) ||
-                String(item.categoria).toLowerCase().includes(term)
+                String(item.categoria).toLowerCase().includes(term) ||
+                String(item.proveedor).toLowerCase().includes(term)
             );
             renderTable(filtered);
         }
 
-        async function guardarProducto() {
-            const nuevo = {
+        async function guardarProducto(e) {
+            e.preventDefault();
+            const btn = document.getElementById("btnGuardar");
+            btn.disabled = true;
+            btn.innerText = "Guardando...";
+
+            const payload = {
                 action: "add",
-                password: globalPassword,
+                usuario: sessionCreds.usuario,
+                password: sessionCreds.password,
                 codigo: document.getElementById("codigo").value,
                 producto: document.getElementById("producto").value,
                 categoria: document.getElementById("categoria").value,
@@ -191,17 +236,23 @@
             try {
                 const response = await fetch(WEB_APP_URL, {
                     method: "POST",
-                    body: JSON.stringify(nuevo)
+                    body: JSON.stringify(payload)
                 });
                 const result = await response.json();
+                
                 if (result.status === "success") {
-                    alert("¡Producto registrado con éxito!");
-                    location.reload();
+                    inventoryData = result.data;
+                    renderTable(inventoryData);
+                    document.getElementById("productForm").reset();
+                    bootstrap.Modal.getInstance(document.getElementById('modalNuevo')).hide();
                 } else {
                     alert("Error: " + result.message);
                 }
-            } catch (e) {
-                alert("Error de red al registrar el producto.");
+            } catch (error) {
+                alert("Error de red al guardar el producto.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Guardar Producto";
             }
         }
     </script>
