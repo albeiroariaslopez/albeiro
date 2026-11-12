@@ -1,1354 +1,287 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Gestión de Inventario | Plataforma Web</title>
-
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Fuente Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
-  <!-- SheetJS (xlsx) para lectura y generación real de archivos .xlsx -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          },
-        },
-      },
-    };
-  </script>
-
-  <style>
-    /* Transiciones suaves y scrollbar limpio */
-    body {
-      font-family: 'Inter', sans-serif;
-    }
-    .fade-in {
-      animation: fadeIn 0.25s ease-out forwards;
-    }
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Inventario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="bg-light">
 
-  <!-- Contenedor de Notificaciones Toast -->
-  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
-
-  <!-- ===================================================================== -->
-  <!-- PANTALLA DE INICIO DE SESIÓN (LOGIN)                                  -->
-  <!-- ===================================================================== -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950">
-    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden fade-in">
-      <!-- Cabecera Login -->
-      <div class="bg-indigo-600 px-6 py-7 text-white text-center relative overflow-hidden">
-        <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center mx-auto mb-3 border border-white/20">
-          <i data-lucide="boxes" class="w-6 h-6 text-white"></i>
+    <!-- LOGIN SCREEN -->
+    <div id="loginSection" class="container mt-5" style="max-width: 400px;">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4"><i class="fas fa-boxes"></i> Inventario</h3>
+                <div id="loginAlert" class="alert alert-danger d-none" role="alert"></div>
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label class="form-label">Usuario</label>
+                        <input type="text" id="userInput" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" id="passInput" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="loginBtn">Ingresar</button>
+                </form>
+            </div>
         </div>
-        <h1 class="text-xl font-bold tracking-tight">Gestión de Inventario</h1>
-        <p class="text-indigo-100 text-xs mt-1">Control de Existencias &amp; Base de Datos Excel</p>
-      </div>
-
-      <!-- Cuerpo Login -->
-      <div class="p-6 sm:p-8 space-y-5">
-        <!-- Estado de la Base de Datos -->
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <span id="db-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
-            <div class="truncate">
-              <p class="text-xs font-semibold text-slate-700 truncate" id="db-source-label">Base predeterminada cargada</p>
-              <p class="text-[11px] text-slate-500" id="db-counts-label">2 usuarios · 3 productos</p>
-            </div>
-          </div>
-          <label for="login-excel-upload" class="cursor-pointer shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition">
-            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-            <span>Cargar .xlsx</span>
-          </label>
-          <input type="file" id="login-excel-upload" accept=".xlsx,.xls" class="hidden" />
-        </div>
-
-        <!-- Formulario de Autenticación -->
-        <form id="login-form" class="space-y-4">
-          <div>
-            <label for="login-user" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Usuario</label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <i data-lucide="user" class="w-4 h-4"></i>
-              </div>
-              <input
-                type="text"
-                id="login-user"
-                required
-                autocomplete="username"
-                placeholder="Ej. admin"
-                class="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label for="login-pass" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Contraseña</label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <i data-lucide="lock" class="w-4 h-4"></i>
-              </div>
-              <input
-                type="password"
-                id="login-pass"
-                required
-                autocomplete="current-password"
-                placeholder="••••••••"
-                class="w-full pl-9 pr-10 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              />
-              <button
-                type="button"
-                id="toggle-password-btn"
-                title="Mostrar/ocultar contraseña"
-                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-              >
-                <i data-lucide="eye" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-
-          <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3 flex items-center gap-2">
-            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
-            <span id="login-error-text">Credenciales inválidas o usuario inactivo.</span>
-          </div>
-
-          <button
-            type="submit"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-2"
-          >
-            <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span>Ingresar al Sistema</span>
-          </button>
-        </form>
-
-        <!-- Ayuda rápida de credenciales de la hoja Usuarios -->
-        <div class="pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            id="toggle-demo-creds"
-            class="w-full flex items-center justify-between text-xs text-slate-500 hover:text-indigo-600 transition py-1"
-          >
-            <span class="flex items-center gap-1.5">
-              <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
-              <span>Ver credenciales iniciales de la hoja Usuarios</span>
-            </span>
-            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
-          </button>
-
-          <div id="demo-creds-box" class="hidden mt-2 bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-2 text-xs">
-            <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200/60">
-              <div>
-                <span class="font-semibold text-slate-800">admin</span>
-                <span class="text-slate-400 mx-1">/</span>
-                <code class="text-indigo-600 font-mono">Admin2026!</code>
-                <span class="ml-1.5 text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-medium">Administrador</span>
-              </div>
-              <button type="button" onclick="fillCredentials('admin', 'Admin2026!')" class="text-indigo-600 hover:underline font-medium">Usar</button>
-            </div>
-            <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200/60">
-              <div>
-                <span class="font-semibold text-slate-800">operador</span>
-                <span class="text-slate-400 mx-1">/</span>
-                <code class="text-indigo-600 font-mono">Inv2026*</code>
-                <span class="ml-1.5 text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">Operador</span>
-              </div>
-              <button type="button" onclick="fillCredentials('operador', 'Inv2026*')" class="text-indigo-600 hover:underline font-medium">Usar</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- ===================================================================== -->
-  <!-- PANEL PRINCIPAL DE ADMINISTRACIÓN (DASHBOARD)                         -->
-  <!-- ===================================================================== -->
-  <div id="app-screen" class="hidden flex-1 flex flex-col">
-
-    <!-- Barra de Navegación Superior -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <!-- Marca -->
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-sm">
-            <i data-lucide="boxes" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <span class="font-bold text-slate-900 text-sm sm:text-base block leading-tight">Sistema de Inventario</span>
-            <span class="text-[11px] text-slate-500 hidden sm:block">Sincronizado con Excel (.xlsx)</span>
-          </div>
+    <!-- DASHBOARD SCREEN -->
+    <div id="appSection" class="container-fluid mt-4 d-none">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h2><i class="fas fa-warehouse"></i> Gestión de Inventario</h2>
+                <span class="text-muted" id="userWelcome"></span>
+            </div>
+            <div class="col-md-6 text-end">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#itemModal" onclick="prepareAdd()">
+                    <i class="fas fa-plus"></i> Nuevo Artículo
+                </button>
+                <button class="btn btn-outline-danger" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </button>
+            </div>
         </div>
 
-        <!-- Acciones Globales de Excel y Sesión -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Botón Cargar Excel -->
-          <label
-            for="app-excel-upload"
-            title="Importar archivo Excel (.xlsx)"
-            class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition shadow-xs"
-          >
-            <i data-lucide="upload" class="w-3.5 h-3.5 text-slate-500"></i>
-            <span class="hidden md:inline">Cargar Excel</span>
-          </label>
-          <input type="file" id="app-excel-upload" accept=".xlsx,.xls" class="hidden" />
-
-          <!-- Botón Descargar Excel Actualizado -->
-          <button
-            type="button"
-            id="export-excel-btn"
-            class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl transition shadow-xs"
-          >
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span>Descargar Excel</span>
-          </button>
-
-          <div class="h-6 w-px bg-slate-200 mx-0.5"></div>
-
-          <!-- Info Usuario Activo -->
-          <div class="flex items-center gap-2.5">
-            <div class="text-right hidden sm:block">
-              <p id="nav-username" class="text-xs font-semibold text-slate-800 leading-tight">admin</p>
-              <span id="nav-userrole" class="inline-block text-[10px] font-medium px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700">Administrador</span>
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Consultar por código, producto, categoría o proveedor..." onkeyup="filterTable()">
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Categoría</th>
+                                <th>Stock</th>
+                                <th>Precio ($)</th>
+                                <th>Proveedor</th>
+                                <th>Actualizado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                            <!-- Datos cargados dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <button
-              type="button"
-              id="logout-btn"
-              title="Cerrar sesión"
-              class="inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
-            >
-              <i data-lucide="log-out" class="w-4 h-4"></i>
-              <span class="hidden lg:inline">Salir</span>
-            </button>
-          </div>
         </div>
-      </div>
-    </header>
-
-    <!-- Contenido Principal -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-      <!-- Banner informativo de persistencia en GitHub Pages -->
-      <div class="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div class="flex items-start sm:items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-            <i data-lucide="cloud-check" class="w-4 h-4"></i>
-          </div>
-          <div class="text-xs text-slate-700">
-            <span class="font-semibold text-indigo-950">Modo GitHub Pages Activo:</span>
-            Tus cambios se guardan automáticamente en este navegador. Al finalizar, haz clic en
-            <strong class="text-emerald-700">Descargar Excel</strong> para obtener tu archivo actualizado
-            (<code class="text-[11px] bg-white px-1.5 py-0.5 rounded border border-indigo-100">Sistema de Gestion de Inventario - Base de Datos.xlsx</code>).
-          </div>
-        </div>
-        <button
-          type="button"
-          id="reset-demo-btn"
-          class="self-end sm:self-center shrink-0 text-[11px] font-medium text-indigo-700 hover:text-indigo-900 underline"
-        >
-          Restaurar datos originales
-        </button>
-      </div>
-
-      <!-- Pestañas de Navegación (Inventario / Usuarios) -->
-      <div class="flex items-center justify-between border-b border-slate-200">
-        <nav class="flex gap-2 -mb-px" aria-label="Pestañas">
-          <button
-            type="button"
-            id="tab-btn-inventario"
-            onclick="switchTab('inventario')"
-            class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 transition"
-          >
-            <i data-lucide="package" class="w-4 h-4"></i>
-            <span>Inventario</span>
-            <span id="tab-badge-inventario" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">0</span>
-          </button>
-
-          <button
-            type="button"
-            id="tab-btn-usuarios"
-            onclick="switchTab('usuarios')"
-            class="hidden inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition"
-          >
-            <i data-lucide="users" class="w-4 h-4"></i>
-            <span>Usuarios (Hoja Excel)</span>
-            <span id="tab-badge-usuarios" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">0</span>
-          </button>
-        </nav>
-      </div>
-
-      <!-- ================================================================= -->
-      <!-- VISTA 1: PESTAÑA INVENTARIO                                       -->
-      <!-- ================================================================= -->
-      <section id="view-inventario" class="space-y-6 fade-in">
-        <!-- Tarjetas KPI -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Productos</p>
-              <p id="kpi-total-productos" class="text-2xl font-bold text-slate-900 mt-1">0</p>
-            </div>
-            <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <i data-lucide="layers" class="w-5 h-5"></i>
-            </div>
-          </div>
-
-          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Unidades en Stock</p>
-              <p id="kpi-total-stock" class="text-2xl font-bold text-slate-900 mt-1">0</p>
-            </div>
-            <div class="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
-              <i data-lucide="package-check" class="w-5 h-5"></i>
-            </div>
-          </div>
-
-          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Valor Total Inventario</p>
-              <p id="kpi-valor-total" class="text-2xl font-bold text-emerald-700 mt-1">$ 0</p>
-            </div>
-            <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <i data-lucide="badge-dollar-sign" class="w-5 h-5"></i>
-            </div>
-          </div>
-
-          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Categorías Activas</p>
-              <p id="kpi-total-categorias" class="text-2xl font-bold text-slate-900 mt-1">0</p>
-            </div>
-            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <i data-lucide="tags" class="w-5 h-5"></i>
-            </div>
-          </div>
-        </div>
-
-        <!-- Barra de Herramientas (Búsqueda, Filtro y Botón Nuevo Registro) -->
-        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div class="flex flex-col sm:flex-row gap-3 flex-1">
-            <!-- Buscador -->
-            <div class="relative flex-1 max-w-md">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <i data-lucide="search" class="w-4 h-4"></i>
-              </div>
-              <input
-                type="text"
-                id="search-input"
-                placeholder="Buscar por código, producto o proveedor..."
-                class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              />
-            </div>
-
-            <!-- Filtro por Categoría -->
-            <div class="sm:w-52">
-              <select
-                id="category-filter"
-                class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-              >
-                <option value="">Todas las categorías</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Botón Agregar Producto -->
-          <button
-            type="button"
-            id="open-add-modal-btn"
-            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-xs transition"
-          >
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>Nuevo Producto</span>
-          </button>
-        </div>
-
-        <!-- Tabla de Inventario -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-slate-50/90 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th class="py-3.5 px-4">ID</th>
-                  <th class="py-3.5 px-4">Código</th>
-                  <th class="py-3.5 px-4">Producto</th>
-                  <th class="py-3.5 px-4">Categoría</th>
-                  <th class="py-3.5 px-4 text-right">Stock</th>
-                  <th class="py-3.5 px-4 text-right">Precio Unit.</th>
-                  <th class="py-3.5 px-4">Proveedor</th>
-                  <th class="py-3.5 px-4">Actualizado</th>
-                  <th class="py-3.5 px-4 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="inventory-table-body" class="divide-y divide-slate-100 text-sm">
-                <!-- Filas renderizadas dinámicamente -->
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Estado Vacío -->
-          <div id="empty-state" class="hidden py-12 px-4 text-center">
-            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-              <i data-lucide="inbox" class="w-6 h-6"></i>
-            </div>
-            <h3 class="text-sm font-semibold text-slate-800">No se encontraron registros</h3>
-            <p class="text-xs text-slate-500 mt-1">Intenta cambiar los filtros de búsqueda o agrega un nuevo producto.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ================================================================= -->
-      <!-- VISTA 2: PESTAÑA USUARIOS (SOLO LECTURA PARA ADMINISTRADOR)       -->
-      <!-- ================================================================= -->
-      <section id="view-usuarios" class="hidden space-y-4 fade-in">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-            <div>
-              <h2 class="text-base font-bold text-slate-900">Usuarios Autorizados (Pestaña 'Usuarios')</h2>
-              <p class="text-xs text-slate-500">Listado sincronizado desde la hoja <code class="bg-slate-100 px-1 rounded">Usuarios</code> del libro Excel.</p>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th class="py-3 px-4">Usuario</th>
-                  <th class="py-3 px-4">Contraseña</th>
-                  <th class="py-3 px-4">Rol</th>
-                  <th class="py-3 px-4">Estado</th>
-                </tr>
-              </thead>
-              <tbody id="users-table-body" class="divide-y divide-slate-100 text-sm">
-                <!-- Filas de usuarios renderizadas dinámicamente -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- Pie de página -->
-    <footer class="bg-white border-t border-slate-200 py-4 px-4 sm:px-6 lg:px-8 mt-auto">
-      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-        <span>Sistema de Gestión de Inventario · Compatible con GitHub Pages</span>
-        <span>Estructura Excel: Hoja <strong>Inventario</strong> &amp; Hoja <strong>Usuarios</strong></span>
-      </div>
-    </footer>
-  </div>
-
-  <!-- ===================================================================== -->
-  <!-- MODAL AGREGAR / EDITAR PRODUCTO                                       -->
-  <!-- ===================================================================== -->
-  <div id="product-modal" class="hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 overflow-hidden fade-in">
-      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
-            <i data-lucide="package-plus" class="w-4 h-4"></i>
-          </div>
-          <h3 id="modal-title" class="text-base font-bold text-slate-900">Agregar Nuevo Producto</h3>
-        </div>
-        <button type="button" id="close-product-modal" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <form id="product-form" class="p-6 space-y-4">
-        <input type="hidden" id="form-id" />
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="form-codigo" class="block text-xs font-semibold text-slate-700 mb-1">Código *</label>
-            <input
-              type="text"
-              id="form-codigo"
-              required
-              placeholder="Ej. PRD-004"
-              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label for="form-categoria" class="block text-xs font-semibold text-slate-700 mb-1">Categoría *</label>
-            <input
-              type="text"
-              id="form-categoria"
-              list="categorias-sugeridas"
-              required
-              placeholder="Ej. Tecnología"
-              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <datalist id="categorias-sugeridas">
-              <option value="Tecnología"></option>
-              <option value="Mobiliario"></option>
-              <option value="Papelería"></option>
-              <option value="Accesorios"></option>
-            </datalist>
-          </div>
-        </div>
-
-        <div>
-          <label for="form-producto" class="block text-xs font-semibold text-slate-700 mb-1">Nombre del Producto *</label>
-          <input
-            type="text"
-            id="form-producto"
-            required
-            placeholder="Ej. Teclado Mecánico Inalámbrico"
-            class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="form-stock" class="block text-xs font-semibold text-slate-700 mb-1">Stock (Unidades) *</label>
-            <input
-              type="number"
-              id="form-stock"
-              min="0"
-              step="1"
-              required
-              placeholder="0"
-              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label for="form-precio" class="block text-xs font-semibold text-slate-700 mb-1">Precio Unitario (COP) *</label>
-            <input
-              type="number"
-              id="form-precio"
-              min="0"
-              step="any"
-              required
-              placeholder="Ej. 150000"
-              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label for="form-proveedor" class="block text-xs font-semibold text-slate-700 mb-1">Proveedor *</label>
-          <input
-            type="text"
-            id="form-proveedor"
-            required
-            placeholder="Ej. TechSupplier SAS"
-            class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            id="cancel-product-modal"
-            class="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition flex items-center gap-1.5"
-          >
-            <i data-lucide="save" class="w-3.5 h-3.5"></i>
-            <span>Guardar Registro</span>
-          </button>
-        </div>
-      </form>
     </div>
-  </div>
 
-  <!-- ===================================================================== -->
-  <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN                                  -->
-  <!-- ===================================================================== -->
-  <div id="delete-modal" class="hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-6 fade-in">
-      <div class="flex items-start gap-4">
-        <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-          <i data-lucide="trash-2" class="w-5 h-5"></i>
+    <!-- MODAL ADD/EDIT -->
+    <div class="modal fade" id="itemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Nuevo Artículo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="itemForm">
+                        <input type="hidden" id="itemId">
+                        <div class="mb-3">
+                            <label class="form-label">Código</label>
+                            <input type="text" id="itemCodigo" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Producto</label>
+                            <input type="text" id="itemProducto" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <input type="text" id="itemCategoria" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stock</label>
+                            <input type="number" id="itemStock" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precio</label>
+                            <input type="number" id="itemPrecio" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Proveedor</label>
+                            <input type="text" id="itemProveedor" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="saveBtn">Guardar</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div>
-          <h3 class="text-base font-bold text-slate-900">Eliminar Producto</h3>
-          <p class="text-xs text-slate-600 mt-1 leading-relaxed">
-            ¿Estás seguro de que deseas eliminar <strong id="delete-item-name" class="text-slate-900">este producto</strong> del inventario? Esta acción se reflejará al descargar el Excel actualizado.
-          </p>
-        </div>
-      </div>
-
-      <div class="mt-6 flex items-center justify-end gap-2.5">
-        <button
-          type="button"
-          id="cancel-delete-btn"
-          class="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          id="confirm-delete-btn"
-          class="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-xs transition"
-        >
-          Sí, eliminar
-        </button>
-      </div>
     </div>
-  </div>
 
-  <!-- ===================================================================== -->
-  <!-- LÓGICA DE LA APLICACIÓN (JAVASCRIPT)                                  -->
-  <!-- ===================================================================== -->
-  <script>
-    // =========================================================================
-    // 1. DATOS PREDETERMINADOS (EXACTOS DE 'Sistema de Gestion de Inventario')
-    // =========================================================================
-    const DEFAULT_USERS = [
-      { usuario: 'admin', password: 'Admin2026!', rol: 'Administrador', estado: 'Activo' },
-      { usuario: 'operador', password: 'Inv2026*', rol: 'Operador', estado: 'Activo' },
-    ];
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbyyeURGpF2YZb7o6h7UXSeMWrLVXKstXrfmfU89PU68a9LfU_1jaNFCb_UpRUGJS0iy/exec"; // Reemplaza con tu URL de Google Apps Script
+        let inventoryData = [];
+        let modalInstance = null;
 
-    const DEFAULT_INVENTORY = [
-      {
-        id: 1,
-        codigo: 'PRD-001',
-        producto: 'Laptop Empresarial 15"',
-        categoria: 'Tecnología',
-        stock: 15,
-        precio: 2500000,
-        proveedor: 'TechSupplier SAS',
-        actualizado: '2026-11-12',
-      },
-      {
-        id: 2,
-        codigo: 'PRD-002',
-        producto: 'Monitor LED 24 Pulgadas',
-        categoria: 'Tecnología',
-        stock: 30,
-        precio: 650000,
-        proveedor: 'Distribuidora Global',
-        actualizado: '2026-11-12',
-      },
-      {
-        id: 3,
-        codigo: 'PRD-003',
-        producto: 'Silla Ergonomica de Oficina',
-        categoria: 'Mobiliario',
-        stock: 12,
-        precio: 450000,
-        proveedor: 'Muebles & Confort',
-        actualizado: '2026-11-12',
-      },
-    ];
-
-    const STORAGE_KEYS = {
-      INVENTORY: 'sgi_github_inventario_v1',
-      USERS: 'sgi_github_usuarios_v1',
-      SESSION: 'sgi_github_session_v1',
-      SOURCE_NAME: 'sgi_github_source_v1',
-    };
-
-    // Estado global en memoria
-    let state = {
-      inventory: [],
-      users: [],
-      currentUser: null,
-      sourceName: 'Base predeterminada (Excel)',
-      deleteTargetId: null,
-    };
-
-    // =========================================================================
-    // 2. UTILIDADES (FORMATO MONEDA, FECHA, NOTIFICACIONES TOAST)
-    // =========================================================================
-    function formatCurrencyCOP(value) {
-      const num = Number(value) || 0;
-      return '$ ' + num.toLocaleString('es-CO', { maximumFractionDigits: 0 });
-    }
-
-    function getTodayISO() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
-
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-
-      const styles = {
-        success: 'bg-slate-900 text-white border-emerald-500/40',
-        error: 'bg-red-600 text-white border-red-400',
-        info: 'bg-indigo-600 text-white border-indigo-400',
-      };
-
-      const icons = {
-        success: 'check-circle-2',
-        error: 'alert-circle',
-        info: 'info',
-      };
-
-      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-medium fade-in ${styles[type] || styles.success}`;
-      toast.innerHTML = `
-        <i data-lucide="${icons[type] || 'check-circle-2'}" class="w-4 h-4 shrink-0"></i>
-        <span>${message}</span>
-      `;
-
-      container.appendChild(toast);
-      lucide.createIcons({ nodes: [toast] });
-
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(6px)';
-        toast.style.transition = 'all 0.2s ease';
-        setTimeout(() => toast.remove(), 220);
-      }, 3200);
-    }
-
-    // =========================================================================
-    // 3. PERSISTENCIA EN LOCALSTORAGE
-    // =========================================================================
-    function loadStateFromStorage() {
-      try {
-        const savedInv = localStorage.getItem(STORAGE_KEYS.INVENTORY);
-        const savedUsers = localStorage.getItem(STORAGE_KEYS.USERS);
-        const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
-        const savedSource = localStorage.getItem(STORAGE_KEYS.SOURCE_NAME);
-
-        state.inventory = savedInv ? JSON.parse(savedInv) : structuredClone(DEFAULT_INVENTORY);
-        state.users = savedUsers ? JSON.parse(savedUsers) : structuredClone(DEFAULT_USERS);
-        state.currentUser = savedSession ? JSON.parse(savedSession) : null;
-        state.sourceName = savedSource || 'Base predeterminada (Excel)';
-      } catch (err) {
-        console.error('Error leyendo localStorage:', err);
-        state.inventory = structuredClone(DEFAULT_INVENTORY);
-        state.users = structuredClone(DEFAULT_USERS);
-        state.currentUser = null;
-      }
-    }
-
-    function saveDatabaseToStorage() {
-      try {
-        localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(state.inventory));
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(state.users));
-        localStorage.setItem(STORAGE_KEYS.SOURCE_NAME, state.sourceName);
-      } catch (err) {
-        console.error('Error guardando en localStorage:', err);
-      }
-    }
-
-    function saveSessionToStorage() {
-      if (state.currentUser) {
-        localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(state.currentUser));
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.SESSION);
-      }
-    }
-
-    // =========================================================================
-    // 4. LECTURA Y ESCRITURA DE EXCEL (.XLSX) CON SHEETJS
-    // =========================================================================
-    function handleExcelFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-
-          // Verificar existencia de hojas 'Inventario' y 'Usuarios' (insensible a mayúsculas)
-          const sheetNames = workbook.SheetNames;
-          const invSheetName = sheetNames.find((name) => name.trim().toLowerCase() === 'inventario');
-          const usrSheetName = sheetNames.find((name) => name.trim().toLowerCase() === 'usuarios');
-
-          if (!invSheetName || !usrSheetName) {
-            showToast("El archivo Excel debe contener las pestañas 'Inventario' y 'Usuarios'.", 'error');
-            event.target.value = '';
-            return;
-          }
-
-          // Parsear hoja Inventario
-          const rawInv = XLSX.utils.sheet_to_json(workbook.Sheets[invSheetName], { defval: '' });
-          const parsedInv = rawInv.map((row, idx) => ({
-            id: Number(row.id) || idx + 1,
-            codigo: String(row.codigo || '').trim(),
-            producto: String(row.producto || '').trim(),
-            categoria: String(row.categoria || 'General').trim(),
-            stock: Number(row.stock) || 0,
-            precio: Number(row.precio) || 0,
-            proveedor: String(row.proveedor || '').trim(),
-            actualizado: String(row.actualizado || getTodayISO()).trim(),
-          }));
-
-          // Parsear hoja Usuarios
-          const rawUsers = XLSX.utils.sheet_to_json(workbook.Sheets[usrSheetName], { defval: '' });
-          const parsedUsers = rawUsers.map((row) => ({
-            usuario: String(row.usuario || '').trim(),
-            password: String(row.password || '').trim(),
-            rol: String(row.rol || 'Operador').trim(),
-            estado: String(row.estado || 'Activo').trim(),
-          }));
-
-          if (parsedUsers.length === 0) {
-            showToast("La pestaña 'Usuarios' no contiene registros válidos.", 'error');
-            event.target.value = '';
-            return;
-          }
-
-          state.inventory = parsedInv;
-          state.users = parsedUsers;
-          state.sourceName = file.name;
-          saveDatabaseToStorage();
-
-          updateLoginDbStatus();
-          if (state.currentUser) {
-            renderAllDashboard();
-          }
-
-          showToast(`Archivo "${file.name}" cargado (${parsedInv.length} productos, ${parsedUsers.length} usuarios).`, 'success');
-        } catch (error) {
-          console.error('Error al procesar Excel:', error);
-          showToast('No se pudo leer el archivo .xlsx. Verifica el formato.', 'error');
-        } finally {
-          event.target.value = '';
-        }
-      };
-
-      reader.readAsArrayBuffer(file);
-    }
-
-    function exportToExcelFile() {
-      try {
-        // 1. Preparar hoja 'Inventario' con columnas exactas
-        const invRows = state.inventory.map((item) => ({
-          id: Number(item.id),
-          codigo: item.codigo,
-          producto: item.producto,
-          categoria: item.categoria,
-          stock: Number(item.stock),
-          precio: Number(item.precio),
-          proveedor: item.proveedor,
-          actualizado: item.actualizado,
-        }));
-
-        // Si el inventario está vacío, garantizar encabezados
-        const wsInventario =
-          invRows.length > 0
-            ? XLSX.utils.json_to_sheet(invRows, {
-                header: ['id', 'codigo', 'producto', 'categoria', 'stock', 'precio', 'proveedor', 'actualizado'],
-              })
-            : XLSX.utils.aoa_to_sheet([['id', 'codigo', 'producto', 'categoria', 'stock', 'precio', 'proveedor', 'actualizado']]);
-
-        // Ajustar ancho de columnas para mejor presentación en Excel
-        wsInventario['!cols'] = [
-          { wch: 6 },
-          { wch: 12 },
-          { wch: 32 },
-          { wch: 16 },
-          { wch: 10 },
-          { wch: 15 },
-          { wch: 24 },
-          { wch: 14 },
-        ];
-
-        // 2. Preparar hoja 'Usuarios' con columnas exactas
-        const userRows = state.users.map((u) => ({
-          usuario: u.usuario,
-          password: u.password,
-          rol: u.rol,
-          estado: u.estado,
-        }));
-
-        const wsUsuarios = XLSX.utils.json_to_sheet(userRows, {
-          header: ['usuario', 'password', 'rol', 'estado'],
+        document.addEventListener('DOMContentLoaded', () => {
+            modalInstance = new bootstrap.Modal(document.getElementById('itemModal'));
         });
 
-        wsUsuarios['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 12 }];
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = document.getElementById('userInput').value;
+            const pass = document.getElementById('passInput').value;
+            const alertBox = document.getElementById('loginAlert');
+            const btn = document.getElementById('loginBtn');
 
-        // 3. Crear libro y añadir pestañas
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, wsInventario, 'Inventario');
-        XLSX.utils.book_append_sheet(workbook, wsUsuarios, 'Usuarios');
+            btn.disabled = true;
+            btn.innerHTML = 'Verificando...';
+            alertBox.classList.add('d-none');
 
-        // 4. Descargar archivo
-        const filename = 'Sistema de Gestion de Inventario - Base de Datos.xlsx';
-        XLSX.writeFile(workbook, filename);
+            try {
+                const response = await fetch(`${API_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
+                const result = await response.json();
 
-        showToast('Excel actualizado descargado correctamente.', 'success');
-      } catch (err) {
-        console.error('Error exportando Excel:', err);
-        showToast('Ocurrió un error al generar el archivo Excel.', 'error');
-      }
-    }
+                if (result.status === 'success') {
+                    document.getElementById('loginSection').classList.add('d-none');
+                    document.getElementById('appSection').classList.remove('d-none');
+                    document.getElementById('userWelcome').innerText = `Usuario: ${result.usuario} (${result.rol})`;
+                    loadInventory();
+                } else {
+                    alertBox.innerText = result.message;
+                    alertBox.classList.remove('d-none');
+                }
+            } catch (err) {
+                alertBox.innerText = "Error de conexión con el servidor.";
+                alertBox.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Ingresar';
+            }
+        });
 
-    // =========================================================================
-    // 5. AUTENTICACIÓN Y GESTIÓN DE SESIÓN
-    // =========================================================================
-    function updateLoginDbStatus() {
-      document.getElementById('db-source-label').textContent = state.sourceName;
-      document.getElementById('db-counts-label').textContent = `${state.users.length} usuarios · ${state.inventory.length} productos`;
-    }
-
-    function fillCredentials(user, pass) {
-      document.getElementById('login-user').value = user;
-      document.getElementById('login-pass').value = pass;
-      document.getElementById('login-error').classList.add('hidden');
-    }
-
-    function handleLoginSubmit(event) {
-      event.preventDefault();
-      const usernameInput = document.getElementById('login-user').value.trim();
-      const passwordInput = document.getElementById('login-pass').value;
-      const errorBox = document.getElementById('login-error');
-      const errorText = document.getElementById('login-error-text');
-
-      const matchedUser = state.users.find(
-        (u) => u.usuario.toLowerCase() === usernameInput.toLowerCase() && u.password === passwordInput
-      );
-
-      if (!matchedUser) {
-        errorText.textContent = 'Usuario o contraseña incorrectos.';
-        errorBox.classList.remove('hidden');
-        return;
-      }
-
-      if (matchedUser.estado.toLowerCase() !== 'activo') {
-        errorText.textContent = `El usuario "${matchedUser.usuario}" se encuentra en estado "${matchedUser.estado}".`;
-        errorBox.classList.remove('hidden');
-        return;
-      }
-
-      errorBox.classList.add('hidden');
-      state.currentUser = {
-        usuario: matchedUser.usuario,
-        rol: matchedUser.rol,
-        estado: matchedUser.estado,
-      };
-      saveSessionToStorage();
-      enterAppView();
-      showToast(`Bienvenido, ${matchedUser.usuario} (${matchedUser.rol})`, 'success');
-    }
-
-    function handleLogout() {
-      state.currentUser = null;
-      saveSessionToStorage();
-      document.getElementById('login-form').reset();
-      document.getElementById('login-error').classList.add('hidden');
-      document.getElementById('app-screen').classList.add('hidden');
-      document.getElementById('login-screen').classList.remove('hidden');
-      updateLoginDbStatus();
-      showToast('Sesión cerrada.', 'info');
-    }
-
-    function enterAppView() {
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('app-screen').classList.remove('hidden');
-
-      document.getElementById('nav-username').textContent = state.currentUser.usuario;
-      document.getElementById('nav-userrole').textContent = state.currentUser.rol;
-
-      // Mostrar pestaña Usuarios solo si es Administrador
-      const usersTabBtn = document.getElementById('tab-btn-usuarios');
-      if (state.currentUser.rol.toLowerCase() === 'administrador') {
-        usersTabBtn.classList.remove('hidden');
-      } else {
-        usersTabBtn.classList.add('hidden');
-      }
-
-      switchTab('inventario');
-      renderAllDashboard();
-    }
-
-    function switchTab(tabName) {
-      const invView = document.getElementById('view-inventario');
-      const usrView = document.getElementById('view-usuarios');
-      const invBtn = document.getElementById('tab-btn-inventario');
-      const usrBtn = document.getElementById('tab-btn-usuarios');
-
-      if (tabName === 'inventario') {
-        invView.classList.remove('hidden');
-        usrView.classList.add('hidden');
-        invBtn.className = 'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 transition';
-        usrBtn.className = `${state.currentUser?.rol.toLowerCase() === 'administrador' ? 'inline-flex' : 'hidden'} items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition`;
-      } else {
-        invView.classList.add('hidden');
-        usrView.classList.remove('hidden');
-        usrBtn.className = 'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 transition';
-        invBtn.className = 'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 transition';
-        renderUsersTable();
-      }
-    }
-
-    // =========================================================================
-    // 6. RENDERIZADO DE KPI, FILTROS Y TABLAS
-    // =========================================================================
-    function renderAllDashboard() {
-      updateKPIs();
-      updateCategoryFilterOptions();
-      renderInventoryTable();
-      renderUsersTable();
-      document.getElementById('tab-badge-inventario').textContent = state.inventory.length;
-      document.getElementById('tab-badge-usuarios').textContent = state.users.length;
-    }
-
-    function updateKPIs() {
-      const totalProductos = state.inventory.length;
-      const totalStock = state.inventory.reduce((acc, item) => acc + (Number(item.stock) || 0), 0);
-      const valorTotal = state.inventory.reduce(
-        (acc, item) => acc + (Number(item.stock) || 0) * (Number(item.precio) || 0),
-        0
-      );
-      const categoriasUnicas = new Set(state.inventory.map((item) => item.categoria.trim()).filter(Boolean));
-
-      document.getElementById('kpi-total-productos').textContent = totalProductos;
-      document.getElementById('kpi-total-stock').textContent = totalStock.toLocaleString('es-CO');
-      document.getElementById('kpi-valor-total').textContent = formatCurrencyCOP(valorTotal);
-      document.getElementById('kpi-total-categorias').textContent = categoriasUnicas.size;
-    }
-
-    function updateCategoryFilterOptions() {
-      const select = document.getElementById('category-filter');
-      const currentVal = select.value;
-      const categories = [...new Set(state.inventory.map((i) => i.categoria).filter(Boolean))].sort();
-
-      select.innerHTML = '<option value="">Todas las categorías</option>';
-      categories.forEach((cat) => {
-        const opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
-        select.appendChild(opt);
-      });
-
-      if (categories.includes(currentVal)) {
-        select.value = currentVal;
-      }
-    }
-
-    function renderInventoryTable() {
-      const tbody = document.getElementById('inventory-table-body');
-      const emptyState = document.getElementById('empty-state');
-      const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
-      const selectedCategory = document.getElementById('category-filter').value;
-
-      const filtered = state.inventory.filter((item) => {
-        const matchesSearch =
-          !searchTerm ||
-          item.codigo.toLowerCase().includes(searchTerm) ||
-          item.producto.toLowerCase().includes(searchTerm) ||
-          item.proveedor.toLowerCase().includes(searchTerm);
-
-        const matchesCategory = !selectedCategory || item.categoria === selectedCategory;
-
-        return matchesSearch && matchesCategory;
-      });
-
-      tbody.innerHTML = '';
-
-      if (filtered.length === 0) {
-        emptyState.classList.remove('hidden');
-        return;
-      }
-
-      emptyState.classList.add('hidden');
-
-      filtered.forEach((item) => {
-        const isLowStock = Number(item.stock) <= 5;
-        const stockBadgeClass = isLowStock
-          ? 'bg-amber-50 text-amber-700 border-amber-200'
-          : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50/80 transition group';
-        tr.innerHTML = `
-          <td class="py-3.5 px-4 font-mono text-xs text-slate-500">#${item.id}</td>
-          <td class="py-3.5 px-4">
-            <span class="font-mono text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
-              ${escapeHTML(item.codigo)}
-            </span>
-          </td>
-          <td class="py-3.5 px-4 font-medium text-slate-900">${escapeHTML(item.producto)}</td>
-          <td class="py-3.5 px-4">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-              ${escapeHTML(item.categoria)}
-            </span>
-          </td>
-          <td class="py-3.5 px-4 text-right">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold border ${stockBadgeClass}">
-              ${Number(item.stock).toLocaleString('es-CO')}
-            </span>
-          </td>
-          <td class="py-3.5 px-4 text-right font-medium text-slate-800">${formatCurrencyCOP(item.precio)}</td>
-          <td class="py-3.5 px-4 text-slate-600 text-xs">${escapeHTML(item.proveedor)}</td>
-          <td class="py-3.5 px-4 text-slate-500 font-mono text-xs">${escapeHTML(item.actualizado)}</td>
-          <td class="py-3.5 px-4 text-center">
-            <div class="inline-flex items-center justify-center gap-1.5">
-              <button
-                type="button"
-                onclick="openEditModal(${item.id})"
-                title="Editar registro"
-                class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-              >
-                <i data-lucide="pencil" class="w-4 h-4"></i>
-              </button>
-              <button
-                type="button"
-                onclick="openDeleteModal(${item.id})"
-                title="Eliminar registro"
-                class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-              >
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      lucide.createIcons({ nodes: [tbody] });
-    }
-
-    function renderUsersTable() {
-      const tbody = document.getElementById('users-table-body');
-      tbody.innerHTML = '';
-
-      state.users.forEach((u) => {
-        const isActive = u.estado.toLowerCase() === 'activo';
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50/70';
-        tr.innerHTML = `
-          <td class="py-3 px-4 font-semibold text-slate-900">${escapeHTML(u.usuario)}</td>
-          <td class="py-3 px-4 font-mono text-xs text-slate-500">${escapeHTML(u.password)}</td>
-          <td class="py-3 px-4">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              u.rol.toLowerCase() === 'administrador' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'
-            }">
-              ${escapeHTML(u.rol)}
-            </span>
-          </td>
-          <td class="py-3 px-4">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-            }">
-              <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-red-500'}"></span>
-              ${escapeHTML(u.estado)}
-            </span>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function escapeHTML(str) {
-      return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    // =========================================================================
-    // 7. OPERACIONES CRUD (AGREGAR, EDITAR, ELIMINAR)
-    // =========================================================================
-    function openAddModal() {
-      document.getElementById('modal-title').textContent = 'Agregar Nuevo Producto';
-      document.getElementById('product-form').reset();
-      document.getElementById('form-id').value = '';
-
-      // Sugerir siguiente código PRD-XXX automáticamente
-      const nextNum = state.inventory.length + 1;
-      document.getElementById('form-codigo').value = `PRD-${String(nextNum).padStart(3, '0')}`;
-
-      document.getElementById('product-modal').classList.remove('hidden');
-      document.getElementById('form-producto').focus();
-    }
-
-    function openEditModal(id) {
-      const item = state.inventory.find((i) => Number(i.id) === Number(id));
-      if (!item) return;
-
-      document.getElementById('modal-title').textContent = `Editar Producto (#${item.id})`;
-      document.getElementById('form-id').value = item.id;
-      document.getElementById('form-codigo').value = item.codigo;
-      document.getElementById('form-producto').value = item.producto;
-      document.getElementById('form-categoria').value = item.categoria;
-      document.getElementById('form-stock').value = item.stock;
-      document.getElementById('form-precio').value = item.precio;
-      document.getElementById('form-proveedor').value = item.proveedor;
-
-      document.getElementById('product-modal').classList.remove('hidden');
-    }
-
-    function closeProductModal() {
-      document.getElementById('product-modal').classList.add('hidden');
-    }
-
-    function handleProductFormSubmit(event) {
-      event.preventDefault();
-
-      const idVal = document.getElementById('form-id').value;
-      const codigo = document.getElementById('form-codigo').value.trim();
-      const producto = document.getElementById('form-producto').value.trim();
-      const categoria = document.getElementById('form-categoria').value.trim();
-      const stock = Number(document.getElementById('form-stock').value);
-      const precio = Number(document.getElementById('form-precio').value);
-      const proveedor = document.getElementById('form-proveedor').value.trim();
-      const hoy = getTodayISO();
-
-      if (idVal) {
-        // Editar registro existente
-        const idx = state.inventory.findIndex((i) => Number(i.id) === Number(idVal));
-        if (idx !== -1) {
-          state.inventory[idx] = {
-            ...state.inventory[idx],
-            codigo,
-            producto,
-            categoria,
-            stock,
-            precio,
-            proveedor,
-            actualizado: hoy,
-          };
-          showToast(`Producto "${producto}" actualizado.`, 'success');
+        async function loadInventory() {
+            try {
+                const response = await fetch(`${API_URL}?action=getInventario`);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    inventoryData = result.data;
+                    renderTable(inventoryData);
+                }
+            } catch (err) {
+                alert("No se pudo cargar el inventario.");
+            }
         }
-      } else {
-        // Crear nuevo registro con ID auto-incremental
-        const maxId = state.inventory.reduce((max, i) => Math.max(max, Number(i.id) || 0), 0);
-        const newItem = {
-          id: maxId + 1,
-          codigo,
-          producto,
-          categoria,
-          stock,
-          precio,
-          proveedor,
-          actualizado: hoy,
-        };
-        state.inventory.push(newItem);
-        showToast(`Producto "${producto}" agregado al inventario.`, 'success');
-      }
 
-      saveDatabaseToStorage();
-      closeProductModal();
-      renderAllDashboard();
-    }
+        function renderTable(data) {
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.id}</td>
+                        <td>${item.codigo}</td>
+                        <td>${item.producto}</td>
+                        <td>${item.categoria}</td>
+                        <td>${item.stock}</td>
+                        <td>$ ${Number(item.precio).toLocaleString()}</td>
+                        <td>${item.proveedor}</td>
+                        <td>${item.actualizado}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning me-1" onclick='prepareEdit(${JSON.stringify(item)})'><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick='deleteItem(${item.id})'><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
 
-    function openDeleteModal(id) {
-      const item = state.inventory.find((i) => Number(i.id) === Number(id));
-      if (!item) return;
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = inventoryData.filter(item => 
+                String(item.codigo).toLowerCase().includes(query) ||
+                String(item.producto).toLowerCase().includes(query) ||
+                String(item.categoria).toLowerCase().includes(query) ||
+                String(item.proveedor).toLowerCase().includes(query)
+            );
+            renderTable(filtered);
+        }
 
-      state.deleteTargetId = Number(id);
-      document.getElementById('delete-item-name').textContent = `${item.codigo} - ${item.producto}`;
-      document.getElementById('delete-modal').classList.remove('hidden');
-    }
+        function prepareAdd() {
+            document.getElementById('modalTitle').innerText = "Nuevo Artículo";
+            document.getElementById('itemId').value = "";
+            document.getElementById('itemForm').reset();
+        }
 
-    function closeDeleteModal() {
-      state.deleteTargetId = null;
-      document.getElementById('delete-modal').classList.add('hidden');
-    }
+        function prepareEdit(item) {
+            document.getElementById('modalTitle').innerText = "Editar Artículo";
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemCodigo').value = item.codigo;
+            document.getElementById('itemProducto').value = item.producto;
+            document.getElementById('itemCategoria').value = item.categoria;
+            document.getElementById('itemStock').value = item.stock;
+            document.getElementById('itemPrecio').value = item.precio;
+            document.getElementById('itemProveedor').value = item.proveedor;
+            modalInstance.show();
+        }
 
-    function confirmDeleteProduct() {
-      if (state.deleteTargetId === null) return;
+        document.getElementById('itemForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('itemId').value;
+            const item = {
+                id: id,
+                codigo: document.getElementById('itemCodigo').value,
+                producto: document.getElementById('itemProducto').value,
+                categoria: document.getElementById('itemCategoria').value,
+                stock: document.getElementById('itemStock').value,
+                precio: document.getElementById('itemPrecio').value,
+                proveedor: document.getElementById('itemProveedor').value
+            };
 
-      const target = state.inventory.find((i) => Number(i.id) === state.deleteTargetId);
-      state.inventory = state.inventory.filter((i) => Number(i.id) !== state.deleteTargetId);
+            const action = id ? 'update' : 'add';
 
-      saveDatabaseToStorage();
-      closeDeleteModal();
-      renderAllDashboard();
-      showToast(`Registro "${target ? target.producto : ''}" eliminado.`, 'info');
-    }
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: action, item: item })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    modalInstance.hide();
+                    loadInventory();
+                } else {
+                    alert(result.message);
+                }
+            } catch (err) {
+                alert("Error al guardar el registro.");
+            }
+        });
 
-    function resetToDefaultData() {
-      state.inventory = structuredClone(DEFAULT_INVENTORY);
-      state.users = structuredClone(DEFAULT_USERS);
-      state.sourceName = 'Base predeterminada (Excel)';
-      saveDatabaseToStorage();
-      renderAllDashboard();
-      showToast('Datos restaurados a la versión original del archivo Excel.', 'info');
-    }
+        async function deleteItem(id) {
+            if (!confirm("¿Estás seguro de eliminar este registro?")) return;
 
-    // =========================================================================
-    // 8. INICIALIZACIÓN Y EVENT LISTENERS
-    // =========================================================================
-    document.addEventListener('DOMContentLoaded', () => {
-      loadStateFromStorage();
-      updateLoginDbStatus();
-      lucide.createIcons();
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'delete', id: id })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    loadInventory();
+                } else {
+                    alert(result.message);
+                }
+            } catch (err) {
+                alert("Error al eliminar el registro.");
+            }
+        }
 
-      // Si hay una sesión activa guardada, entrar directo al panel
-      if (state.currentUser) {
-        enterAppView();
-      }
-
-      // Eventos de Login
-      document.getElementById('login-form').addEventListener('submit', handleLoginSubmit);
-      document.getElementById('login-excel-upload').addEventListener('change', handleExcelFileUpload);
-      document.getElementById('toggle-demo-creds').addEventListener('click', () => {
-        document.getElementById('demo-creds-box').classList.toggle('hidden');
-      });
-      document.getElementById('toggle-password-btn').addEventListener('click', () => {
-        const passInput = document.getElementById('login-pass');
-        passInput.type = passInput.type === 'password' ? 'text' : 'password';
-      });
-
-      // Eventos de Barra Superior y Excel
-      document.getElementById('app-excel-upload').addEventListener('change', handleExcelFileUpload);
-      document.getElementById('export-excel-btn').addEventListener('click', exportToExcelFile);
-      document.getElementById('logout-btn').addEventListener('click', handleLogout);
-      document.getElementById('reset-demo-btn').addEventListener('click', resetToDefaultData);
-
-      // Eventos de Búsqueda y Filtro
-      document.getElementById('search-input').addEventListener('input', renderInventoryTable);
-      document.getElementById('category-filter').addEventListener('change', renderInventoryTable);
-
-      // Eventos de Modales CRUD
-      document.getElementById('open-add-modal-btn').addEventListener('click', openAddModal);
-      document.getElementById('close-product-modal').addEventListener('click', closeProductModal);
-      document.getElementById('cancel-product-modal').addEventListener('click', closeProductModal);
-      document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit);
-
-      document.getElementById('cancel-delete-btn').addEventListener('click', closeDeleteModal);
-      document.getElementById('confirm-delete-btn').addEventListener('click', confirmDeleteProduct);
-    });
-  </script>
+        function logout() {
+            document.getElementById('appSection').classList.add('d-none');
+            document.getElementById('loginSection').classList.remove('d-none');
+            document.getElementById('loginForm').reset();
+        }
+    </script>
 </body>
 </html>
