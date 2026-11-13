@@ -3,72 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestión de Inventario</title>
+    <title>Sistema de Inventario</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-light">
 
-    <!-- LOGIN SCREEN -->
-    <div id="loginSection" class="container mt-5" style="max-width: 400px;">
+    <!-- SECCIÓN DE LOGIN -->
+    <div id="login-section" class="container mt-5" style="max-width: 400px;">
         <div class="card shadow">
-            <div class="card-body p-4">
-                <h3 class="text-center mb-4"><i class="fas fa-boxes"></i> Inventario</h3>
-                <div id="loginAlert" class="alert alert-danger d-none" role="alert"></div>
-                <form id="loginForm">
-                    <div class="mb-3">
-                        <label class="form-label">Usuario</label>
-                        <input type="text" id="userInput" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Contraseña</label>
-                        <input type="password" id="passInput" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100" id="loginBtn">Ingresar</button>
-                </form>
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">Iniciar Sesión</h3>
+                <div class="mb-3">
+                    <label class="form-label">Usuario</label>
+                    <input type="text" id="userInput" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    <input type="password" id="passInput" class="form-control" required>
+                </div>
+                <button onclick="login()" class="tag-btn btn btn-primary w-100">Ingresar</button>
+                <div id="loginError" class="text-danger mt-3 text-center"></div>
             </div>
         </div>
     </div>
 
-    <!-- DASHBOARD SCREEN -->
-    <div id="appSection" class="container-fluid mt-4 d-none">
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <h2><i class="fas fa-warehouse"></i> Gestión de Inventario</h2>
-                <span class="text-muted" id="userWelcome"></span>
-            </div>
-            <div class="col-md-6 text-end">
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#itemModal" onclick="prepareAdd()">
-                    <i class="fas fa-plus"></i> Nuevo Artículo
-                </button>
-                <button class="btn btn-outline-danger" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> Salir
-                </button>
+    <!-- SECCIÓN DE PANEL DE INVENTARIO -->
+    <div id="app-section" class="container mt-4" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Panel de Control de Inventario</h2>
+            <button onclick="logout()" class="btn btn-outline-danger btn-sm">Cerrar Sesión</button>
+        </div>
+
+        <!-- Formulario para agregar / editar -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 id="formTitle" class="card-title">Agregar Nuevo Elemento</h5>
+                <form id="itemForm" class="row g-3" onsubmit="saveItem(event)">
+                    <input type="hidden" id="rowIndex">
+                    <!-- Ajusta estos campos según las columnas de tu pestaña inventario -->
+                    <div class="col-md-4">
+                        <label class="form-label">Código / ID</label>
+                        <input type="text" id="col0" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" id="col1" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" id="col2" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success" id="btnGuardar">Guardar Registro</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()" style="display:none;" id="btnCancelar">Cancelar</button>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <div class="card shadow mb-4">
+        <!-- Tabla de datos -->
+        <div class="card shadow-sm">
             <div class="card-body">
-                <div class="mb-3">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Consultar por código, producto, categoría o proveedor..." onkeyup="filterTable()">
-                </div>
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Código</th>
-                                <th>Producto</th>
-                                <th>Categoría</th>
-                                <th>Stock</th>
-                                <th>Precio ($)</th>
-                                <th>Proveedor</th>
-                                <th>Actualizado</th>
-                                <th>Acciones</th>
-                            </tr>
+                    <table class="table table-striped table-hover" id="inventarioTable">
+                        <thead>
+                            <!-- Se llenará dinámicamente -->
                         </thead>
-                        <tbody id="inventoryTableBody">
-                            <!-- Datos cargados dinámicamente -->
+                        <tbody>
+                            <!-- Se llenará dinámicamente -->
                         </tbody>
                     </table>
                 </div>
@@ -76,211 +79,136 @@
         </div>
     </div>
 
-    <!-- MODAL ADD/EDIT -->
-    <div class="modal fade" id="itemModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Nuevo Artículo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="itemForm">
-                        <input type="hidden" id="itemId">
-                        <div class="mb-3">
-                            <label class="form-label">Código</label>
-                            <input type="text" id="itemCodigo" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Producto</label>
-                            <input type="text" id="itemProducto" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Categoría</label>
-                            <input type="text" id="itemCategoria" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Stock</label>
-                            <input type="number" id="itemStock" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Precio</label>
-                            <input type="number" id="itemPrecio" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Proveedor</label>
-                            <input type="text" id="itemProveedor" class="form-control" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" id="saveBtn">Guardar</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_URL = "https://script.google.com/macros/library/d/17dqeNT1QDo1HijbGC_8OREifaVJLEEcLOwCsK0miivyrx9vJu74rDA2U/2"; // Reemplaza con tu URL de Google Apps Script
-        let inventoryData = [];
-        let modalInstance = null;
+        const API_URL = 'TU_URL_DE_APPS_SCRIPT_AQUI';
+        let inventarioData = [];
 
-        document.addEventListener('DOMContentLoaded', () => {
-            modalInstance = new bootstrap.Modal(document.getElementById('itemModal'));
-        });
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        function login() {
             const user = document.getElementById('userInput').value;
             const pass = document.getElementById('passInput').value;
-            const alertBox = document.getElementById('loginAlert');
-            const btn = document.getElementById('loginBtn');
 
-            btn.disabled = true;
-            btn.innerHTML = 'Verificando...';
-            alertBox.classList.add('d-none');
-
-            try {
-                const response = await fetch(`${API_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    document.getElementById('loginSection').classList.add('d-none');
-                    document.getElementById('appSection').classList.remove('d-none');
-                    document.getElementById('userWelcome').innerText = `Usuario: ${result.usuario} (${result.rol})`;
-                    loadInventory();
-                } else {
-                    alertBox.innerText = result.message;
-                    alertBox.classList.remove('d-none');
-                }
-            } catch (err) {
-                alertBox.innerText = "Error de conexión con el servidor.";
-                alertBox.classList.remove('d-none');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Ingresar';
-            }
-        });
-
-        async function loadInventory() {
-            try {
-                const response = await fetch(`${API_URL}?action=getInventario`);
-                const result = await response.json();
-                if (result.status === 'success') {
-                    inventoryData = result.data;
-                    renderTable(inventoryData);
-                }
-            } catch (err) {
-                alert("No se pudo cargar el inventario.");
-            }
-        }
-
-        function renderTable(data) {
-            const tbody = document.getElementById('inventoryTableBody');
-            tbody.innerHTML = '';
-            data.forEach(item => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${item.id}</td>
-                        <td>${item.codigo}</td>
-                        <td>${item.producto}</td>
-                        <td>${item.categoria}</td>
-                        <td>${item.stock}</td>
-                        <td>$ ${Number(item.precio).toLocaleString()}</td>
-                        <td>${item.proveedor}</td>
-                        <td>${item.actualizado}</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning me-1" onclick='prepareEdit(${JSON.stringify(item)})'><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-danger" onclick='deleteItem(${item.id})'><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-
-        function filterTable() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = inventoryData.filter(item => 
-                String(item.codigo).toLowerCase().includes(query) ||
-                String(item.producto).toLowerCase().includes(query) ||
-                String(item.categoria).toLowerCase().includes(query) ||
-                String(item.proveedor).toLowerCase().includes(query)
-            );
-            renderTable(filtered);
-        }
-
-        function prepareAdd() {
-            document.getElementById('modalTitle').innerText = "Nuevo Artículo";
-            document.getElementById('itemId').value = "";
-            document.getElementById('itemForm').reset();
-        }
-
-        function prepareEdit(item) {
-            document.getElementById('modalTitle').innerText = "Editar Artículo";
-            document.getElementById('itemId').value = item.id;
-            document.getElementById('itemCodigo').value = item.codigo;
-            document.getElementById('itemProducto').value = item.producto;
-            document.getElementById('itemCategoria').value = item.categoria;
-            document.getElementById('itemStock').value = item.stock;
-            document.getElementById('itemPrecio').value = item.precio;
-            document.getElementById('itemProveedor').value = item.proveedor;
-            modalInstance.show();
-        }
-
-        document.getElementById('itemForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('itemId').value;
-            const item = {
-                id: id,
-                codigo: document.getElementById('itemCodigo').value,
-                producto: document.getElementById('itemProducto').value,
-                categoria: document.getElementById('itemCategoria').value,
-                stock: document.getElementById('itemStock').value,
-                precio: document.getElementById('itemPrecio').value,
-                proveedor: document.getElementById('itemProveedor').value
-            };
-
-            const action = id ? 'update' : 'add';
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: action, item: item })
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    modalInstance.hide();
-                    loadInventory();
-                } else {
-                    alert(result.message);
-                }
-            } catch (err) {
-                alert("Error al guardar el registro.");
-            }
-        });
-
-        async function deleteItem(id) {
-            if (!confirm("¿Estás seguro de eliminar este registro?")) return;
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'delete', id: id })
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    loadInventory();
-                } else {
-                    alert(result.message);
-                }
-            } catch (err) {
-                alert("Error al eliminar el registro.");
-            }
+            fetch(`${API_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        document.getElementById('login-section').style.display = 'none';
+                        document.getElementById('app-section').style.display = 'block';
+                        cargarInventario();
+                    } else {
+                        document.getElementById('loginError').innerText = res.message;
+                    }
+                }).catch(err => alert('Error de conexión'));
         }
 
         function logout() {
-            document.getElementById('appSection').classList.add('d-none');
-            document.getElementById('loginSection').classList.remove('d-none');
-            document.getElementById('loginForm').reset();
+            document.getElementById('app-section').style.display = 'none';
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('userInput').value = '';
+            document.getElementById('passInput').value = '';
+        }
+
+        function cargarInventario() {
+            fetch(`${API_URL}?action=read`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        inventarioData = res.data;
+                        renderTable();
+                    }
+                });
+        }
+
+        function renderTable() {
+            const thead = document.querySelector('#inventarioTable thead');
+            const tbody = document.querySelector('#inventarioTable tbody');
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            if (inventarioData.length === 0) return;
+
+            // Cabecera (Fila 0 de la hoja)
+            let headerRow = '<tr>';
+            inventarioData[0].forEach(col => {
+                headerRow += `<th>${col}</th>`;
+            });
+            headerRow += '<th>Acciones</th></tr>';
+            thead.innerHTML = headerRow;
+
+            // Cuerpo (Filas siguientes)
+            for (let i = 1; i < inventarioData.length; i++) {
+                let row = inventarioData[i];
+                let tr = '<tr>';
+                row.forEach(cell => {
+                    tr += `<td>${cell}</td>`;
+                });
+                tr += `<td>
+                        <button class="btn btn-sm btn-warning me-1" onclick="editarFila(${i})">Editar</button>
+                        <button class="btn btn-sm btn-danger" onclick="eliminarFila(${i + 1})">Eliminar</button>
+                       </td>`;
+                tr += '</tr>';
+                tbody.innerHTML += tr;
+            }
+        }
+
+        function saveItem(e) {
+            e.preventDefault();
+            const rowIndex = document.getElementById('rowIndex').value;
+            // Ajusta la cantidad de campos según tus columnas
+            const rowData = [
+                document.getElementById('col0').value,
+                document.getElementById('col1').value,
+                document.getElementById('col2').value
+            ];
+
+            const action = rowIndex ? 'update' : 'add';
+            // El índice real en Google Sheets (base 1) requiere compensar cabecera y arreglos
+            const realRowIndex = rowIndex ? parseInt(rowIndex) + 1 : null;
+
+            fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: action, row: rowData, rowIndex: realRowIndex })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    resetForm();
+                    cargarInventario();
+                }
+            });
+        }
+
+        function editarFila(index) {
+            const row = inventarioData[index];
+            document.getElementById('rowIndex').value = index;
+            document.getElementById('col0').value = row[0];
+            document.getElementById('col1').value = row[1];
+            document.getElementById('col2').value = row[2];
+            document.getElementById('formTitle').innerText = 'Editar Elemento';
+            document.getElementById('btnGuardar').innerText = 'Actualizar';
+            document.getElementById('btnCancelar').style.display = 'inline-block';
+        }
+
+        function eliminarFila(sheetRowIndex) {
+            if (confirm('¿Estás seguro de eliminar este registro?')) {
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'delete', rowIndex: sheetRowIndex })
+                })
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        cargarInventario();
+                    }
+                });
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('itemForm').reset();
+            document.getElementById('rowIndex').value = '';
+            document.getElementById('formTitle').innerText = 'Agregar Nuevo Elemento';
+            document.getElementById('btnGuardar').innerText = 'Guardar Registro';
+            document.getElementById('btnCancelar').style.display = 'none';
         }
     </script>
 </body>
