@@ -67,7 +67,7 @@
 
     <script>
         // PEGA AQUÍ TU URL DE LA APLICACIÓN WEB DE GOOGLE APPS SCRIPT
-        const API_URL = 'https://script.google.com/macros/library/d/19eLoFHx3zLzeX9gYfeiCOmbC5m_rL5UPD0nIeJ2dgmh2i4b8p8ze_KUg/2';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwFad6Vv6RwDBHmKqTEEZfdhdF5lnbl8PXo2It02lI3SR7vvKvOiWx1iO-hsdsETw0/exec';
         let inventarioData = [];
 
         function login() {
@@ -84,7 +84,7 @@
                     } else {
                         document.getElementById('loginError').innerText = res.message;
                     }
-                }).catch(err => alert('Error de conexión.'));
+                }).catch(err => alert('Error de conexión al servicio.'));
         }
 
         function logout() {
